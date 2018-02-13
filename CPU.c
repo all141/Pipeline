@@ -10,6 +10,62 @@
 #include <arpa/inet.h>
 #include "CPU.h" 
 
+struct trace_item buff_stages[6];
+int stall_flag = 0;
+
+void check_hazards(size){
+	
+	//Control Hazard
+	if(buff_stages[3]->type == BRANCH ||
+	   buff_stages[3]->type == JTYPE ||
+	   buff_stages[3]->type == JRTYPE ||){
+		   
+		//PC of new instruction is same as branch/jump target address
+		if(size->PC == buff_stages[3]->Addr){
+			buff_stages[0]-> type = NOP;
+			buff_stages[1]-> type = NOP;
+			buff_stages[2]-> type = NOP;
+		}
+		
+		/*
+		size = new instr at branch/jump target address
+		buff_stages[0-2] = no ops (flushed)
+		buff_stages[3-5] = unchanged instructions
+		*/
+		
+	}
+	//Data Hazard A
+	if(buff_stages[3].type==LOAD&&((buff_stages[2].type==(RTYPE||STORE||BRANCH)&&buff_stages[3].dReg==buff_stages[2].sReg_a||buff_stages[3].dReg==buff_stages[2].sReg_b)||(buff_stages[2].type==ITYPE&&buff_stages[3].dReg==buff_stages[2].sReg_a))){
+		
+		//Data Hazard B
+	}else if(buff_stages[4].type==LOAD&&((buff_stages[2].type==(RTYPE||STORE||BRANCH)&&buff_stages[4].dReg==buff_stages[2].sReg_a||buff_stages[3].dReg==buff_stages[2].sReg_b)||(buff_stages[2].type==ITYPE&&buff_stages[4].dReg==buff_stages[2].sReg_a))){
+		
+		//Structural Hazard
+	}else if(buff_stages[4].type==(RTYPE||ITYPE||LOAD) && buff_stages[1].type!=JTYPE)){
+		
+	}else{
+		
+	}
+	
+	return NULL;
+}
+
+void push_pipeline(size){
+	
+	if(/*stallflag = 1*/){
+		
+	}else{
+		buff_stages[5] = buff_stages[4];
+		buff_stages[4] = buff_stages[3];
+		buff_stages[3] = buff_stages[2];
+		buff_stages[2] = buff_stages[1];
+		buff_stages[1] = buff_stages[0];
+		buff_stages[0] = size;
+	}
+	
+	
+}
+
 int main(int argc, char **argv)
 {
   struct trace_item *tr_entry;
@@ -25,7 +81,7 @@ int main(int argc, char **argv)
   unsigned int t_Addr = 0;
 
   unsigned int cycle_number = 0;
-
+  
   if (argc == 1) {
     fprintf(stdout, "\nUSAGE: tv <trace_file> <switch - any character>\n");
     fprintf(stdout, "\n(switch) to turn on or off individual item view.\n\n");
@@ -62,11 +118,18 @@ int main(int argc, char **argv)
       t_PC = tr_entry->PC;
       t_Addr = tr_entry->Addr;
     }  
-
+	
+	/*Need method(s) to check for hazard conditions before pushing in newe instructions*/
+	check_struct_hazards(size);
+	
+	
+	/*Need method(s) to insert a new instruction in pipeline and push existing instructions
+	further in*/
+	
+	
 // SIMULATION OF A SINGLE CYCLE cpu IS TRIVIAL - EACH INSTRUCTION IS EXECUTED
 // IN ONE CYCLE
-
-    if (trace_view_on) {/* print the executed instruction if trace_view_on=1 */
+    if (trace_view_on) {// print the executed instruction if trace_view_on=1 
       switch(tr_entry->type) {
         case ti_NOP:
           printf("[cycle %d] NOP\n:",cycle_number) ;
@@ -104,10 +167,13 @@ int main(int argc, char **argv)
           break;
       }
     }
+	
+	push_pipeline(size);
   }
-
+  
   trace_uninit();
 
   exit(0);
 }
+
 
