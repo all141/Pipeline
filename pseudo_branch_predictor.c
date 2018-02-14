@@ -32,6 +32,42 @@ else				//Prediction is in BTB
 		Correct the entry in BTB;
 *******************************************************************************************
 BTB
+struct BranchEntry 
+{
+	int prediction;
+	char targetAddr[6];
+	char branchPC[6];
+}
+struct BranchEntry BranchTable[64];
 
 
+To index an entry:
+	//Must get bits 8-3 of address.
+	Mod result by 1024
+	Divide the result by 8
+	Mod this by 64 to get hash index
+	= branchIndex
+	
+int getindex(int address)
+{
+	int a = address;
+	a = a % 1024;
+	a = a / 8;
+	a = a % 64;
+	return a;
+}
+	
+int hexToDec(char *address)
+{
+      int a = atoi(address);
+      int d, i = 0, r;
+      while(a > 0)
+      {
+            r = a % 10;
+            d = d + r * pow(16, i);
+             = a / 10;
+            i++;
+      }
+      return d;
+}
 	
