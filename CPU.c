@@ -119,7 +119,7 @@ int main(int argc, char **argv)
       t_Addr = tr_entry->Addr;
     }  
 	
-	/*Need method(s) to check for hazard conditions before pushing in newe instructions*/
+	/*Need method(s) to check for hazard conditions before pushing in new instructions*/
 	check_struct_hazards(size);
 	
 	
