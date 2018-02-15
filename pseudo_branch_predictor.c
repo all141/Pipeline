@@ -10,26 +10,53 @@ assumed. Use a Branch Prediction Hash Table with 64 entries and index this table
 stored information will be lost – that is OK).
 *******************************************************************************************
 LOGIC
-if(PC is not in BTB)  //No prediction available
-	PC = PC + 4;
-	if(buff_stages[3]>type == BRANCH) //Is instruction a branch
+int currentPC = buff_stages[0]->PC;
+int entryIndex = getIndex(currentPC); 
+if(BranchTable[entryIndex]==null)
+{//No prediction available
+	currentPC = currentPC + 4; //Maybe TR_entry instead??
+	if(buff_stages[3]->type == BRANCH)
+	{//Is instruction a branch
 		//Instruction is a branch
-		if(buff_stages[0]->PC == buff_stages[3]->Addr) //Is the branch taken
-			Correct the PC;
-			Kill Instruction in IF1 and IF2 and ID //Maybe not ID
-			Correct the entry in BTB;
-		else //Instruction is not a branch
-			Record entry in BTB;
-	else
+		if(buff_stages[0]->PC == buff_stages[3]->Addr) 
+		{//Is the branch taken
+			tr_entry->PC = buff_stages[0]->PC + 4 //Correct the PC;
+			buff_stages[0]->type = NOP //Maybe not ID|Maybe send in noops in first place instead of squashing
+			buff_stages[1]->type = NOP
+			buff_stages[2]->type = NOP
+			BranchTable[entryindex]->prediction = 1;
+			BranchTable[entryindex]->targetAddr = buff_stages[3]->Addr;
+			BranchTable[entryindex]->branchPC = buff_stages[3]->PC;
+		}
+		else 
+		{
+			BranchTable[entryindex]->prediction = 0;
+			BranchTable[entryindex]->targetAddr = buff_stages[3]->Addr;
+			BranchTable[entryindex]->branchPC = buff_stages[3]->PC;
+		}
+	}
+	else 
+	{//Instruction is not a branch
 		Proceed as normal;
-else				//Prediction is in BTB
-	Set PC to PC in BTB;
-	if(prediction = correct) //Was prediction correct
+	}
+else{//Prediction is in BTB
+	currentPC = BranchTable[entryIndex]->branchPC;
+	if(buff_stages[3]->Addr == buff_stages[2]->PC) //Was prediction correct
+	{
 		Proceed as normal;
+	}
 	else	
-		Correct the PC;
-		Kill instruction in IF1 and IF2 and ID //Maybe not ID
-		Correct the entry in BTB;
+	{
+		tr_entry->PC = buff_stages[0]->PC + 4 //Correct the PC;
+		buff_stages[0]->type = NOP //Maybe not ID|Maybe send in noops in first place instead of squashing
+		buff_stages[1]->type = NOP
+		buff_stages[2]->type = NOP
+		BranchTable[entryindex]->prediction = 1;
+		BranchTable[entryindex]->targetAddr = buff_stages[3]->Addr;
+		BranchTable[entryindex]->branchPC = buff_stages[3]->PC;
+	}
+    }
+}
 *******************************************************************************************
 BTB
 struct BranchEntry 
@@ -39,16 +66,8 @@ struct BranchEntry
 	char branchPC[6];
 }
 struct BranchEntry BranchTable[64];
-
-
-To index an entry:
-	//Must get bits 8-3 of address.
-	Mod result by 1024
-	Divide the result by 8
-	Mod this by 64 to get hash index
-	= branchIndex
 	
-int getindex(int address)
+int getIndex(int address)
 {
 	int a = address;
 	a = a % 1024;
