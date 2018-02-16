@@ -13,9 +13,19 @@
 struct trace_item buff_stages[6];
 int stall_flag = 0;
 
-void check_hazards(size){
+/* Function: check_hazards
+ * -----------------------
+ * This method is called before buff_stages[] is pushed by push_pipeline(). It detects any hazards that may occur during the current clock cycle. 
+ * If a hazard is detected, this method modifies the 'stallflag' variable to indicate which hazard must be resolved.
+ *
+ * entry: the next trace_item to be pushed into buff_stages[0]
+ *
+ * returns: NULL (buff_stages[] is global so it should already be usable by all other methods once modified)
+ */
+void check_hazards(struct trace_item entry){
 	
-	//Control Hazard
+	//This needs to play nice with the branch prediction
+	/*Control Hazard
 	if(buff_stages[3]->type == BRANCH ||
 	   buff_stages[3]->type == JTYPE ||
 	   buff_stages[3]->type == JRTYPE ||){
@@ -27,43 +37,79 @@ void check_hazards(size){
 			buff_stages[2]-> type = NOP;
 		}
 		
-		/*
+	
 		size = new instr at branch/jump target address
 		buff_stages[0-2] = no ops (flushed)
 		buff_stages[3-5] = unchanged instructions
-		*/
-		
-	}
+	}*/
+	
 	//Data Hazard A
 	if(buff_stages[3].type==LOAD&&((buff_stages[2].type==(RTYPE||STORE||BRANCH)&&buff_stages[3].dReg==buff_stages[2].sReg_a||buff_stages[3].dReg==buff_stages[2].sReg_b)||(buff_stages[2].type==ITYPE&&buff_stages[3].dReg==buff_stages[2].sReg_a))){
+		stallflag = 1;
 		
-		//Data Hazard B
+	//Data Hazard B
 	}else if(buff_stages[4].type==LOAD&&((buff_stages[2].type==(RTYPE||STORE||BRANCH)&&buff_stages[4].dReg==buff_stages[2].sReg_a||buff_stages[3].dReg==buff_stages[2].sReg_b)||(buff_stages[2].type==ITYPE&&buff_stages[4].dReg==buff_stages[2].sReg_a))){
+		stallflag = 2;
 		
-		//Structural Hazard
+	//Structural Hazard	
 	}else if(buff_stages[4].type==(RTYPE||ITYPE||LOAD) && buff_stages[1].type!=JTYPE)){
-		
+		stallflag = 3;
+	
+	//No hazard detected
 	}else{
-		
+		stallflag = 0;
 	}
 	
 	return NULL;
 }
 
-void push_pipeline(size){
+// ******NOTE***** What if there is more than one hazard during a cycle? Should we have a way to loop to check for and then resolve multiple hazards?
+/* Function: push_pipeline
+ * -----------------------
+ * Push instructions in the buff_stages array to the next index (stage). This method will look at the 'stallflag' variable to see if any NOOPs need to
+ * be injected into the buff_stages[] due to hazards detected by the check_hazards() method. 
+ *
+ * entry: the next trace_item to be pushed into buff_stages[0] 
+ * exiting: the trace_item that is being pushed out of the pipeline (pushed out of buff_stage[5])
+ *
+ * returns: exiting (buff_stages[] is global so it should already be usable by all other methods once modified)
+ */
+void push_pipeline(struct trace_item entry, struct trace_item exiting){
 	
-	if(/*stallflag = 1*/){
-		
-	}else{
+	if(stallflag != 0){ //stallflag = 0 by default, which means no stalling would be needed
+		if(stallflag == 1){ // Stall for data hazard A	
+			buff_stages[5] = buff_stages[4];
+			buff_stages[4] = buff_stages[3];
+			buff_stages[3]->type = NOP;
+			
+		}else if(stallflag == 2){ //Stall for data hazard B
+			buff_stages[5] = buff_stages[4];
+			buff_stages[4]->type = NOP;
+			
+		}else if(stallflag == 3){ //Stall for structural hazard
+			buff_stages[5] = buff_stages[4];
+			buff_stages[4] = buff_stages[3];
+			buff_stages[3]->type = NOP;
+			
+		}else{
+			//stallflag should never be something other than 0,1,2,3
+			printf("Invalid value of stallflag");
+			exit(0);
+		}	
+	}else{ //No hazards or stalling needed
+		exiting = buff_stages[5];
 		buff_stages[5] = buff_stages[4];
 		buff_stages[4] = buff_stages[3];
 		buff_stages[3] = buff_stages[2];
 		buff_stages[2] = buff_stages[1];
 		buff_stages[1] = buff_stages[0];
-		buff_stages[0] = size;
+		buff_stages[0] = entry;
 	}
 	
+	//check hazards here again?
 	
+	stallflag = 0; //Reset stallflag
+	return exiting;
 }
 
 int main(int argc, char **argv)
@@ -72,6 +118,14 @@ int main(int argc, char **argv)
   size_t size;
   char *trace_file_name;
   int trace_view_on = 0;
+  
+  struct trace_item *tr_exit; //Instruction that exited pipeline
+  tr_exit->type = NULL;
+  tr_exit->sReg_a = NULL;
+  tr_exit->sReg_b = NULL;
+  tr_exit->dReg = NULL;
+  tr_exit->PC = NULL;
+  tr_exit->Addr = NULL;
   
   unsigned char t_type = 0;
   unsigned char t_sReg_a= 0;
@@ -102,8 +156,9 @@ int main(int argc, char **argv)
 
   trace_init();
 
+  //Loop until the end of the trace file
   while(1) {
-    size = trace_get_item(&tr_entry);
+    size = trace_get_item(&tr_entry); //Fetch next instruction
    
     if (!size) {       /* no more instructions (trace_items) to simulate */
       printf("+ Simulation terminates at cycle : %u\n", cycle_number);
@@ -119,56 +174,55 @@ int main(int argc, char **argv)
       t_Addr = tr_entry->Addr;
     }  
 	
-	/*Need method(s) to check for hazard conditions before pushing in new instructions*/
-	check_struct_hazards(size);
+	/* At this point, we have fetched the next instruction to be enter the pipeline.	
+	 * We must check for hazards that will occur in this cycle before we push the pipeline.
+	*/
+	//Check for hazards before pushing the pipeline
+	check_struct_hazards(&tr_entry);
 	
-	
-	/*Need method(s) to insert a new instruction in pipeline and push existing instructions
-	further in*/
-	
+	//resolve hazards and push instructions in buff_stages[] to next index
+	push_pipeline(&tr_entry, &tr_exit);
 	
 // SIMULATION OF A SINGLE CYCLE cpu IS TRIVIAL - EACH INSTRUCTION IS EXECUTED
 // IN ONE CYCLE
     if (trace_view_on) {// print the executed instruction if trace_view_on=1 
-      switch(tr_entry->type) {
+      switch(tr_exit->type) {
         case ti_NOP:
           printf("[cycle %d] NOP\n:",cycle_number) ;
           break;
         case ti_RTYPE:
           printf("[cycle %d] RTYPE:",cycle_number) ;
-          printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(dReg: %d) \n", tr_entry->PC, tr_entry->sReg_a, tr_entry->sReg_b, tr_entry->dReg);
+          printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(dReg: %d) \n", tr_exit->PC, tr_exit->sReg_a, tr_exit->sReg_b, tr_exit->dReg);
           break;
         case ti_ITYPE:
           printf("[cycle %d] ITYPE:",cycle_number) ;
-          printf(" (PC: %x)(sReg_a: %d)(dReg: %d)(addr: %x)\n", tr_entry->PC, tr_entry->sReg_a, tr_entry->dReg, tr_entry->Addr);
+          printf(" (PC: %x)(sReg_a: %d)(dReg: %d)(addr: %x)\n", tr_exit->PC, tr_exit->sReg_a, tr_exit->dReg, tr_exit->Addr);
           break;
         case ti_LOAD:
           printf("[cycle %d] LOAD:",cycle_number) ;      
-          printf(" (PC: %x)(sReg_a: %d)(dReg: %d)(addr: %x)\n", tr_entry->PC, tr_entry->sReg_a, tr_entry->dReg, tr_entry->Addr);
+          printf(" (PC: %x)(sReg_a: %d)(dReg: %d)(addr: %x)\n", tr_exit->PC, tr_exit->sReg_a, tr_exit->dReg, tr_exit->Addr);
           break;
         case ti_STORE:
           printf("[cycle %d] STORE:",cycle_number) ;      
-          printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(addr: %x)\n", tr_entry->PC, tr_entry->sReg_a, tr_entry->sReg_b, tr_entry->Addr);
+          printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(addr: %x)\n", tr_exit->PC, tr_exit->sReg_a, tr_exit->sReg_b, tr_exit->Addr);
           break;
         case ti_BRANCH:
           printf("[cycle %d] BRANCH:",cycle_number) ;
-          printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(addr: %x)\n", tr_entry->PC, tr_entry->sReg_a, tr_entry->sReg_b, tr_entry->Addr);
+          printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(addr: %x)\n", tr_exit->PC, tr_exit->sReg_a, tr_exit->sReg_b, tr_exit->Addr);
           break;
         case ti_JTYPE:
           printf("[cycle %d] JTYPE:",cycle_number) ;
-          printf(" (PC: %x)(addr: %x)\n", tr_entry->PC,tr_entry->Addr);
+          printf(" (PC: %x)(addr: %x)\n", tr_exit->PC,tr_exit->Addr);
           break;
         case ti_SPECIAL:
           printf("[cycle %d] SPECIAL:\n",cycle_number) ;      	
           break;
         case ti_JRTYPE:
           printf("[cycle %d] JRTYPE:",cycle_number) ;
-          printf(" (PC: %x) (sReg_a: %d)(addr: %x)\n", tr_entry->PC, tr_entry->dReg, tr_entry->Addr);
+          printf(" (PC: %x) (sReg_a: %d)(addr: %x)\n", tr_exit->PC, tr_exit->dReg, tr_exit->Addr);
           break;
       }
     }
-	
-	push_pipeline(size);
   }
   
   trace_uninit();
