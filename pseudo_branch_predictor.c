@@ -24,26 +24,26 @@ if(BranchTable[entryIndex]==null)
 			buff_stages[0]->type = NOP //Maybe not ID|Maybe send in noops in first place instead of squashing
 			buff_stages[1]->type = NOP
 			buff_stages[2]->type = NOP
-			BranchTable[entryindex]->prediction = 1;
+			BranchTable[entryindex]->prediction = updatePrediction(BranchTable[entryIndex]->prediction, ARGV[2], 1);
 			BranchTable[entryindex]->targetAddr = buff_stages[3]->Addr;
 			BranchTable[entryindex]->branchPC = buff_stages[3]->PC;
 		}
 		else 
 		{
-			BranchTable[entryindex]->prediction = 0;
+			BranchTable[entryindex]->prediction = updatePrediction(BranchTable[entryIndex]->prediction, ARGV[2], 0);
 			BranchTable[entryindex]->targetAddr = buff_stages[3]->Addr;
 			BranchTable[entryindex]->branchPC = buff_stages[3]->PC;
 		}
 	}
 	else 
 	{//Instruction is not a branch
-		Proceed as normal;
+		//Proceed as normal;
 	}
 else{//Prediction is in BTB
 	currentPC = BranchTable[entryIndex]->branchPC;
 	if(buff_stages[3]->Addr == buff_stages[2]->PC) //Was prediction correct
 	{
-		Proceed as normal;
+		//Proceed as normal;
 	}
 	else	
 	{
@@ -51,12 +51,95 @@ else{//Prediction is in BTB
 		buff_stages[0]->type = NOP //Maybe not ID|Maybe send in noops in first place instead of squashing
 		buff_stages[1]->type = NOP
 		buff_stages[2]->type = NOP
-		BranchTable[entryindex]->prediction = 1;
+		BranchTable[entryindex]->prediction = updatePrediction(BranchTable[entryIndex]->prediction, ARGV[2], 1);
 		BranchTable[entryindex]->targetAddr = buff_stages[3]->Addr;
 		BranchTable[entryindex]->branchPC = buff_stages[3]->PC;
 	}
     }
 }
+//P = prediction s = prediction style given by starting arguments.
+//If hitMiss = 1 then update to hit else update to miss
+int updatePrediction(int p, int s, int hitMiss)
+{
+	switch(s)
+	{
+		case 1://One Bit Predictor
+		if(hitMiss==0) //Predict Not Taken
+		{
+			return 0;
+		}elseif(hitMiss==1) //Predict Taken
+		{
+			return 1;
+		}else
+		{
+			printf("Invalid hitMiss!");
+		}
+		break;
+		case 2: //Two Bit Predictor
+		switch(p)
+		{
+			case 0://Predict Not Taken 00
+				if(hitMiss == 0)//Still predict not taken
+				{
+					return 0;//Predicition is 00
+				}elseif(hitMiss == 1)//Predict Taken
+				{
+					return 1; //Prediction is 01
+				}else
+				{
+					printf("Invalid hitMiss");
+				}	
+			break;
+				
+			case 1://Predict Not Taken 01
+				if(hitMiss == 0)//Still predict not taken
+				{
+					return 0;//Prediction is 00
+				}elseif(hitMiss == 1)//Predict Taken
+				{
+					return 3; //Prediction is 11
+				}else
+				{
+					printf("Invalid hitMiss");
+				}
+			break;
+				
+			case 2: //Predict Taken 10
+				if(hitMiss == 0)//Predict not taken
+				{
+					return 0;//Prediciton is 00
+				}elseif(hitMiss == 1)//Predict Taken
+				{
+					return 3; //Prediction is 11
+				}else
+				{
+					printf("Invalid hitMiss");
+				}
+			break;
+				
+			case 3:
+				if(hitMiss == 0)//Predict not taken
+				{
+					return 2; //Prediction is 10
+				}elseif(hitMiss == 1)//Predict Taken
+				{
+					return 3; //Prediction is 11
+				}else
+				{
+					printf("Invalid hitMiss");
+				}	
+			break;
+				
+			default:
+			printf("Invalid Prediction!");
+		}
+			
+		break;
+		default:
+		printf("Invalid case!");
+	}
+}
+
 *******************************************************************************************
 BTB
 struct BranchEntry 
@@ -65,6 +148,7 @@ struct BranchEntry
 	char targetAddr[6];
 	char branchPC[6];
 }
+
 struct BranchEntry BranchTable[64];
 	
 int getIndex(int address)
