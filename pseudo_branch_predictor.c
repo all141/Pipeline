@@ -21,10 +21,11 @@ if(BranchTable[entryIndex]==null)
 		{//Is the branch taken
 			//Correct the PC;
 			tr_entry->type = ti_NOP;
-			buff_stages[0].type = ti_NOP //Maybe not ID|Maybe send in noops in first place instead of squashing
+			buff_stages[0].type = ti_NOP
 			BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, ARGV[2], 1);
 			BranchTable[entryindex].targetAddr = buff_stages[2].Addr;
 			BranchTable[entryindex].branchPC = buff_stages[2].PC;
+			//SQUASH
 		}
 		else 
 		{
@@ -45,10 +46,11 @@ else{//Prediction is in BTB
 	else	
 	{
 		tr_entry->type = ti_NOP
-		buff_stages[0].type = ti_NOP //Maybe send in noops in first place instead of squashing
+		buff_stages[0].type = ti_NOP
 		BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, ARGV[1], 1);
 		BranchTable[entryindex].targetAddr = buff_stages[2].Addr;
 		BranchTable[entryindex].branchPC = buff_stages[2].PC;
+		//SQUASH
 	}
     }
 }
