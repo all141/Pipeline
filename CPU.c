@@ -10,6 +10,7 @@
 #include <arpa/inet.h>
 #include "CPU.h" 
 
+printf("h file working");
 struct trace_item buff_stages[6];
 int stall_flag = 0;
 
@@ -31,6 +32,7 @@ void check_hazards(struct trace_item entry){
 	   buff_stages[3]->type == JRTYPE ||){
 		   
 		//PC of new instruction is same as branch/jump target address
+    //  vvv - what is size??? , is this supposed to be comparing predicted PC to BTB???
 		if(size->PC == buff_stages[3]->Addr){
 			buff_stages[0]-> type = NOP;
 			buff_stages[1]-> type = NOP;
@@ -44,26 +46,27 @@ void check_hazards(struct trace_item entry){
 	}*/
 	
 	//Data Hazard A
-	if(buff_stages[3].type==LOAD&&((buff_stages[2].type==(RTYPE||STORE||BRANCH)&&buff_stages[3].dReg==buff_stages[2].sReg_a||buff_stages[3].dReg==buff_stages[2].sReg_b)||(buff_stages[2].type==ITYPE&&buff_stages[3].dReg==buff_stages[2].sReg_a))){
-		stallflag = 1;
+	if(buff_stages[3].type==ti_LOAD&&((buff_stages[2].type==(ti_RTYPE||ti_STORE||ti_BRANCH)&&buff_stages[3].dReg==buff_stages[2].sReg_a||buff_stages[3].dReg==buff_stages[2].sReg_b)||(buff_stages[2].type==ti_ITYPE&&buff_stages[3].dReg==buff_stages[2].sReg_a))){
+		stall_flag = 1;
 		
 	//Data Hazard B
-	}else if(buff_stages[4].type==LOAD&&((buff_stages[2].type==(RTYPE||STORE||BRANCH)&&buff_stages[4].dReg==buff_stages[2].sReg_a||buff_stages[3].dReg==buff_stages[2].sReg_b)||(buff_stages[2].type==ITYPE&&buff_stages[4].dReg==buff_stages[2].sReg_a))){
-		stallflag = 2;
+	}else if(buff_stages[4].type==ti_LOAD&&((buff_stages[2].type==(ti_RTYPE||ti_STORE||ti_BRANCH)&&buff_stages[4].dReg==buff_stages[2].sReg_a||buff_stages[3].dReg==buff_stages[2].sReg_b)||(buff_stages[2].type==ti_ITYPE&&buff_stages[4].dReg==buff_stages[2].sReg_a))){
+		stall_flag = 2;
 		
 	//Structural Hazard	
-	}else if(buff_stages[4].type==(RTYPE||ITYPE||LOAD) && buff_stages[1].type!=JTYPE)){
-		stallflag = 3;
+	}else if(buff_stages[4].type==(ti_RTYPE||ti_ITYPE||ti_LOAD) && (buff_stages[1].type!=ti_JTYPE)){
+		stall_flag = 3;
 	
 	//No hazard detected
 	}else{
-		stallflag = 0;
+		stall_flag = 0;
 	}
 	
-	return NULL;
 }
 
 // ******NOTE***** What if there is more than one hazard during a cycle? Should we have a way to loop to check for and then resolve multiple hazards?
+// Possible Answer?: Rerun the hazard check after any hazard is detected and dealt with. Should work as long as there is a correct heiarchy of hazard detection.
+// Possible Answer? Cont.: Maybe put in call to hazard check after every stage of this if-else for the stall flags unless there is no flag.
 /* Function: push_pipeline
  * -----------------------
  * Push instructions in the buff_stages array to the next index (stage). This method will look at the 'stallflag' variable to see if any NOOPs need to
@@ -73,23 +76,25 @@ void check_hazards(struct trace_item entry){
  * exiting: the trace_item that is being pushed out of the pipeline (pushed out of buff_stage[5])
  *
  * returns: exiting (buff_stages[] is global so it should already be usable by all other methods once modified)
+ *
+ * Function Call: push_pipeline(*tr_entry, &tr_exit)
  */
-void push_pipeline(struct trace_item entry, struct trace_item exiting){
+void push_pipeline(struct trace_item entry, struct trace_item* exiting){
 	
-	if(stallflag != 0){ //stallflag = 0 by default, which means no stalling would be needed
-		if(stallflag == 1){ // Stall for data hazard A	
+	if(stall_flag != 0){ //stallflag = 0 by default, which means no stalling would be needed
+		if(stall_flag == 1){ // Stall for data hazard A	
 			buff_stages[5] = buff_stages[4];
 			buff_stages[4] = buff_stages[3];
-			buff_stages[3]->type = NOP;
+			buff_stages[3].type = ti_NOP;
 			
-		}else if(stallflag == 2){ //Stall for data hazard B
+		}else if(stall_flag == 2){ //Stall for data hazard B
 			buff_stages[5] = buff_stages[4];
-			buff_stages[4]->type = NOP;
+			buff_stages[4].type = ti_NOP;
 			
-		}else if(stallflag == 3){ //Stall for structural hazard
+		}else if(stall_flag == 3){ //Stall for structural hazard
 			buff_stages[5] = buff_stages[4];
 			buff_stages[4] = buff_stages[3];
-			buff_stages[3]->type = NOP;
+			buff_stages[3].type = ti_NOP;
 			
 		}else{
 			//stallflag should never be something other than 0,1,2,3
@@ -97,7 +102,7 @@ void push_pipeline(struct trace_item entry, struct trace_item exiting){
 			exit(0);
 		}	
 	}else{ //No hazards or stalling needed
-		exiting = buff_stages[5];
+		*exiting = buff_stages[5];
 		buff_stages[5] = buff_stages[4];
 		buff_stages[4] = buff_stages[3];
 		buff_stages[3] = buff_stages[2];
@@ -108,8 +113,8 @@ void push_pipeline(struct trace_item entry, struct trace_item exiting){
 	
 	//check hazards here again?
 	
-	stallflag = 0; //Reset stallflag
-	return exiting;
+	stall_flag = 0; //Reset stallflag
+	//return exiting;
 }
 
 int main(int argc, char **argv)
@@ -178,10 +183,11 @@ int main(int argc, char **argv)
 	 * We must check for hazards that will occur in this cycle before we push the pipeline.
 	*/
 	//Check for hazards before pushing the pipeline
-	check_struct_hazards(&tr_entry);
+	//check_struct_hazards(&tr_entry);
 	
 	//resolve hazards and push instructions in buff_stages[] to next index
-	push_pipeline(&tr_entry, &tr_exit);
+  // tr_entry and tr_exit are pointers in this scope to trace_item structs
+	push_pipeline(*tr_entry, tr_exit);
 	
 // SIMULATION OF A SINGLE CYCLE cpu IS TRIVIAL - EACH INSTRUCTION IS EXECUTED
 // IN ONE CYCLE
