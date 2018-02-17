@@ -19,9 +19,9 @@ if(BranchTable[entryIndex]==null)
 		//Instruction is a branch
 		if(tr_entry->PC == buff_stages[2]->Addr) 
 		{//Is the branch taken
-			tr_entry->PC = tr_entry->PC + 4 //Correct the PC;
+			//Correct the PC;
+			tr_entry->type = NOP;
 			buff_stages[0]->type = NOP //Maybe not ID|Maybe send in noops in first place instead of squashing
-			buff_stages[1]->type = NOP
 			BranchTable[entryindex]->prediction = updatePrediction(BranchTable[entryIndex]->prediction, ARGV[2], 1);
 			BranchTable[entryindex]->targetAddr = buff_stages[2]->Addr;
 			BranchTable[entryindex]->branchPC = buff_stages[2]->PC;
@@ -45,9 +45,8 @@ else{//Prediction is in BTB
 	}
 	else	
 	{
-		tr_entry->PC = tr_entry->PC + 4 //Correct the PC;
-		buff_stages[0]->type = NOP //Maybe not ID|Maybe send in noops in first place instead of squashing
-		buff_stages[1]->type = NOP
+		tr_entry->type = NOP
+		buff_stages[0]->type = NOP //Maybe send in noops in first place instead of squashing
 		BranchTable[entryindex]->prediction = updatePrediction(BranchTable[entryIndex]->prediction, ARGV[2], 1);
 		BranchTable[entryindex]->targetAddr = buff_stages[2]->Addr;
 		BranchTable[entryindex]->branchPC = buff_stages[2]->PC;
