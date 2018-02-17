@@ -10,29 +10,27 @@ assumed. Use a Branch Prediction Hash Table with 64 entries and index this table
 stored information will be lost – that is OK).
 *******************************************************************************************
 LOGIC
-int currentPC = buff_stages[0]->PC;
+int currentPC = tr_entry->PC;
 int entryIndex = getIndex(currentPC); 
 if(BranchTable[entryIndex]==null)
 {//No prediction available
-	currentPC = currentPC + 4; //Maybe TR_entry instead??
-	if(buff_stages[3]->type == BRANCH)
+	if(buff_stages[2]->type == BRANCH)
 	{//Is instruction a branch
 		//Instruction is a branch
-		if(buff_stages[0]->PC == buff_stages[3]->Addr) 
+		if(tr_entry->PC == buff_stages[2]->Addr) 
 		{//Is the branch taken
-			tr_entry->PC = buff_stages[0]->PC + 4 //Correct the PC;
+			tr_entry->PC = tr_entry->PC + 4 //Correct the PC;
 			buff_stages[0]->type = NOP //Maybe not ID|Maybe send in noops in first place instead of squashing
 			buff_stages[1]->type = NOP
-			buff_stages[2]->type = NOP
 			BranchTable[entryindex]->prediction = updatePrediction(BranchTable[entryIndex]->prediction, ARGV[2], 1);
-			BranchTable[entryindex]->targetAddr = buff_stages[3]->Addr;
-			BranchTable[entryindex]->branchPC = buff_stages[3]->PC;
+			BranchTable[entryindex]->targetAddr = buff_stages[2]->Addr;
+			BranchTable[entryindex]->branchPC = buff_stages[2]->PC;
 		}
 		else 
 		{
 			BranchTable[entryindex]->prediction = updatePrediction(BranchTable[entryIndex]->prediction, ARGV[2], 0);
-			BranchTable[entryindex]->targetAddr = buff_stages[3]->Addr;
-			BranchTable[entryindex]->branchPC = buff_stages[3]->PC;
+			BranchTable[entryindex]->targetAddr = buff_stages[2]->Addr;
+			BranchTable[entryindex]->branchPC = buff_stages[2]->PC;
 		}
 	}
 	else 
@@ -41,22 +39,23 @@ if(BranchTable[entryIndex]==null)
 	}
 else{//Prediction is in BTB
 	currentPC = BranchTable[entryIndex]->branchPC;
-	if(buff_stages[3]->Addr == buff_stages[2]->PC) //Was prediction correct
+	if(buff_stages[2]->Addr == buff_stages[1]->PC) //Was prediction correct
 	{
 		//Proceed as normal;
 	}
 	else	
 	{
-		tr_entry->PC = buff_stages[0]->PC + 4 //Correct the PC;
+		tr_entry->PC = tr_entry->PC + 4 //Correct the PC;
 		buff_stages[0]->type = NOP //Maybe not ID|Maybe send in noops in first place instead of squashing
 		buff_stages[1]->type = NOP
-		buff_stages[2]->type = NOP
 		BranchTable[entryindex]->prediction = updatePrediction(BranchTable[entryIndex]->prediction, ARGV[2], 1);
-		BranchTable[entryindex]->targetAddr = buff_stages[3]->Addr;
-		BranchTable[entryindex]->branchPC = buff_stages[3]->PC;
+		BranchTable[entryindex]->targetAddr = buff_stages[2]->Addr;
+		BranchTable[entryindex]->branchPC = buff_stages[2]->PC;
 	}
     }
 }
+
+int checkPrediction
 //P = prediction s = prediction style given by starting arguments.
 //If hitMiss = 1 then update to hit else update to miss
 int updatePrediction(int p, int s, int hitMiss)
