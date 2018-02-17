@@ -10,9 +10,18 @@
 #include <arpa/inet.h>
 #include "CPU.h" 
 
-printf("h file working");
-struct trace_item buff_stages[6];
+//Allocation of memory for instructions
+struct trace_item buff_stages[7];
 int stall_flag = 0;
+
+
+void init_pipeline(){
+	int i;
+	for(i = 0; i < 7; i++){
+		buff_stages[i].type = ti_NOP;
+	}
+	
+}
 
 /* Function: check_hazards
  * -----------------------
@@ -79,7 +88,7 @@ void check_hazards(struct trace_item entry){
  *
  * Function Call: push_pipeline(*tr_entry, &tr_exit)
  */
-void push_pipeline(struct trace_item entry, struct trace_item* exiting){
+void push_pipeline(struct trace_item entry){		
 	
 	if(stall_flag != 0){ //stallflag = 0 by default, which means no stalling would be needed
 		if(stall_flag == 1){ // Stall for data hazard A	
@@ -102,7 +111,7 @@ void push_pipeline(struct trace_item entry, struct trace_item* exiting){
 			exit(0);
 		}	
 	}else{ //No hazards or stalling needed
-		*exiting = buff_stages[5];
+		buff_stages[6] = buff_stages[5];
 		buff_stages[5] = buff_stages[4];
 		buff_stages[4] = buff_stages[3];
 		buff_stages[3] = buff_stages[2];
@@ -119,18 +128,11 @@ void push_pipeline(struct trace_item entry, struct trace_item* exiting){
 
 int main(int argc, char **argv)
 {
+  
   struct trace_item *tr_entry;
   size_t size;
   char *trace_file_name;
   int trace_view_on = 0;
-  
-  struct trace_item *tr_exit; //Instruction that exited pipeline
-  tr_exit->type = NULL;
-  tr_exit->sReg_a = NULL;
-  tr_exit->sReg_b = NULL;
-  tr_exit->dReg = NULL;
-  tr_exit->PC = NULL;
-  tr_exit->Addr = NULL;
   
   unsigned char t_type = 0;
   unsigned char t_sReg_a= 0;
@@ -141,6 +143,9 @@ int main(int argc, char **argv)
 
   unsigned int cycle_number = 0;
   
+  
+  printf("break");
+  
   if (argc == 1) {
     fprintf(stdout, "\nUSAGE: tv <trace_file> <switch - any character>\n");
     fprintf(stdout, "\n(switch) to turn on or off individual item view.\n\n");
@@ -149,11 +154,6 @@ int main(int argc, char **argv)
     
   trace_file_name = argv[1];
   if (argc == 3) trace_view_on = atoi(argv[2]) ;
-  if (argc == 4)
-  {
-	  trace_view_on = atoi(argv[3]);
-	  prediction_method = atoi(argv[2]);
-  }
 
   fprintf(stdout, "\n ** opening file %s\n", trace_file_name);
 
@@ -166,6 +166,8 @@ int main(int argc, char **argv)
 
   trace_init();
 
+  init_pipeline();
+  
   //Loop until the end of the trace file
   while(1) {
     size = trace_get_item(&tr_entry); //Fetch next instruction
@@ -184,6 +186,9 @@ int main(int argc, char **argv)
       t_Addr = tr_entry->Addr;
     }  
 	
+	//Lets see if this works
+	
+	
 	/* At this point, we have fetched the next instruction to be enter the pipeline.	
 	 * We must check for hazards that will occur in this cycle before we push the pipeline.
 	*/
@@ -192,45 +197,46 @@ int main(int argc, char **argv)
 	
 	//resolve hazards and push instructions in buff_stages[] to next index
   // tr_entry and tr_exit are pointers in this scope to trace_item structs
-	push_pipeline(*tr_entry, tr_exit);
+	push_pipeline(*tr_entry);
 	
 // SIMULATION OF A SINGLE CYCLE cpu IS TRIVIAL - EACH INSTRUCTION IS EXECUTED
 // IN ONE CYCLE
+
     if (trace_view_on) {// print the executed instruction if trace_view_on=1 
-      switch(tr_exit->type) {
+      switch(buff_stages[6].type) {
         case ti_NOP:
           printf("[cycle %d] NOP\n:",cycle_number) ;
           break;
         case ti_RTYPE:
           printf("[cycle %d] RTYPE:",cycle_number) ;
-          printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(dReg: %d) \n", tr_exit->PC, tr_exit->sReg_a, tr_exit->sReg_b, tr_exit->dReg);
+          printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(dReg: %d) \n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].sReg_b, buff_stages[6].dReg);
           break;
         case ti_ITYPE:
           printf("[cycle %d] ITYPE:",cycle_number) ;
-          printf(" (PC: %x)(sReg_a: %d)(dReg: %d)(addr: %x)\n", tr_exit->PC, tr_exit->sReg_a, tr_exit->dReg, tr_exit->Addr);
+          printf(" (PC: %x)(sReg_a: %d)(dReg: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].dReg, buff_stages[6].Addr);
           break;
         case ti_LOAD:
           printf("[cycle %d] LOAD:",cycle_number) ;      
-          printf(" (PC: %x)(sReg_a: %d)(dReg: %d)(addr: %x)\n", tr_exit->PC, tr_exit->sReg_a, tr_exit->dReg, tr_exit->Addr);
+          printf(" (PC: %x)(sReg_a: %d)(dReg: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].dReg, buff_stages[6].Addr);
           break;
         case ti_STORE:
           printf("[cycle %d] STORE:",cycle_number) ;      
-          printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(addr: %x)\n", tr_exit->PC, tr_exit->sReg_a, tr_exit->sReg_b, tr_exit->Addr);
+          printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].sReg_b, buff_stages[6].Addr);
           break;
         case ti_BRANCH:
           printf("[cycle %d] BRANCH:",cycle_number) ;
-          printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(addr: %x)\n", tr_exit->PC, tr_exit->sReg_a, tr_exit->sReg_b, tr_exit->Addr);
+          printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].sReg_b, buff_stages[6].Addr);
           break;
         case ti_JTYPE:
           printf("[cycle %d] JTYPE:",cycle_number) ;
-          printf(" (PC: %x)(addr: %x)\n", tr_exit->PC,tr_exit->Addr);
+          printf(" (PC: %x)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].Addr);
           break;
         case ti_SPECIAL:
           printf("[cycle %d] SPECIAL:\n",cycle_number) ;      	
           break;
         case ti_JRTYPE:
           printf("[cycle %d] JRTYPE:",cycle_number) ;
-          printf(" (PC: %x) (sReg_a: %d)(addr: %x)\n", tr_exit->PC, tr_exit->dReg, tr_exit->Addr);
+          printf(" (PC: %x) (sReg_a: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].dReg, buff_stages[6].Addr);
           break;
       }
     }
