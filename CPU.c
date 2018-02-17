@@ -29,6 +29,8 @@ void init_pipeline(){
 	}
 }
 
+
+
 /* Function: check_hazards
  * -----------------------
  * This method is called before buff_stages[] is pushed by push_pipeline(). It detects any hazards that may occur during the current clock cycle. 
@@ -38,7 +40,7 @@ void init_pipeline(){
  *
  * returns: NULL (buff_stages[] is global so it should already be usable by all other methods once modified)
  */
-void check_hazards(struct trace_item entry){
+void check_hazards(){
 	
 	//This needs to play nice with the branch prediction
 	/*Control Hazard
@@ -98,22 +100,28 @@ void push_pipeline(struct trace_item entry){
 	
 	if(stall_flag != 0){ //stallflag = 0 by default, which means no stalling would be needed
 		if(stall_flag == 1){ // Stall for data hazard A	
+		    printf("Data Hazard A\n");
+			buff_stages[6] = buff_stages[5];
 			buff_stages[5] = buff_stages[4];
 			buff_stages[4] = buff_stages[3];
 			buff_stages[3].type = ti_NOP;
 			
 		}else if(stall_flag == 2){ //Stall for data hazard B
+			printf("Data Hazard B\n");
+			buff_stages[6] = buff_stages[5];
 			buff_stages[5] = buff_stages[4];
 			buff_stages[4].type = ti_NOP;
 			
 		}else if(stall_flag == 3){ //Stall for structural hazard
+			printf("Structural Hazard\n");
+			buff_stages[6] = buff_stages[5];
 			buff_stages[5] = buff_stages[4];
 			buff_stages[4] = buff_stages[3];
 			buff_stages[3].type = ti_NOP;
 			
 		}else{
 			//stallflag should never be something other than 0,1,2,3
-			printf("Invalid value of stallflag");
+			printf("Invalid value of stall_flag");
 			exit(0);
 		}	
 	}else{ //No hazards or stalling needed
@@ -127,9 +135,52 @@ void push_pipeline(struct trace_item entry){
 	}
 	
 	//check hazards here again?
+}
+
+void empty_pipeline(){
+	int i;
+	for(i = 0; i < 7; i++) {
+		push_pipeline();
+		if (trace_view_on) {// print the executed instruction if trace_view_on=1 
+		  switch(buff_stages[6].type) {
+			case ti_NOP:
+			  printf("[cycle %d] NOP\n:",cycle_number) ;
+			  break;
+			case ti_RTYPE:
+			  printf("[cycle %d] RTYPE:",cycle_number) ;
+			  printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(dReg: %d) \n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].sReg_b, buff_stages[6].dReg);
+			  break;
+			case ti_ITYPE:
+			  printf("[cycle %d] ITYPE:",cycle_number) ;
+			  printf(" (PC: %x)(sReg_a: %d)(dReg: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].dReg, buff_stages[6].Addr);
+			  break;
+			case ti_LOAD:
+			  printf("[cycle %d] LOAD:",cycle_number) ;      
+			  printf(" (PC: %x)(sReg_a: %d)(dReg: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].dReg, buff_stages[6].Addr);
+			  break;
+			case ti_STORE:
+			  printf("[cycle %d] STORE:",cycle_number) ;      
+			  printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].sReg_b, buff_stages[6].Addr);
+			  break;
+			case ti_BRANCH:
+			  printf("[cycle %d] BRANCH:",cycle_number) ;
+			  printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].sReg_b, buff_stages[6].Addr);
+			  break;
+			case ti_JTYPE:
+			  printf("[cycle %d] JTYPE:",cycle_number) ;
+			  printf(" (PC: %x)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].Addr);
+			  break;
+			case ti_SPECIAL:
+			  printf("[cycle %d] SPECIAL:\n",cycle_number) ;      	
+			  break;
+			case ti_JRTYPE:
+			  printf("[cycle %d] JRTYPE:",cycle_number) ;
+			  printf(" (PC: %x) (sReg_a: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].dReg, buff_stages[6].Addr);
+			  break;
+		  }
+		}
+	}
 	
-	stall_flag = 0; //Reset stallflag
-	//return exiting;
 }
 
 int main(int argc, char **argv)
@@ -148,9 +199,6 @@ int main(int argc, char **argv)
   unsigned int t_Addr = 0;
 
   unsigned int cycle_number = 0;
-  
-  
-  printf("break");
   
   if (argc == 1) {
     fprintf(stdout, "\nUSAGE: tv <trace_file> <switch - any character>\n");
@@ -181,10 +229,15 @@ int main(int argc, char **argv)
   
   //Loop until the end of the trace file
   while(1) {
-    size = trace_get_item(&tr_entry); //Fetch next instruction
-   
+	if(stall_flag == 0){
+		size = trace_get_item(&tr_entry); //Fetch next instruction
+	}    
+    stall_flag = 0; //Reset stall_flag
+	
     if (!size) {       /* no more instructions (trace_items) to simulate */
       printf("+ Simulation terminates at cycle : %u\n", cycle_number);
+	  tr_entry->type = ti_NOP;
+	  empty_pipeline();
       break;
     }
     else{              /* parse the next instruction to simulate */
@@ -197,17 +250,14 @@ int main(int argc, char **argv)
       t_Addr = tr_entry->Addr;
     }  
 	
-	//Lets see if this works
-	
 	
 	/* At this point, we have fetched the next instruction to be enter the pipeline.	
 	 * We must check for hazards that will occur in this cycle before we push the pipeline.
 	*/
 	//Check for hazards before pushing the pipeline
-	//check_struct_hazards(&tr_entry);
+	check_hazards();
 	
 	//resolve hazards and push instructions in buff_stages[] to next index
-  // tr_entry and tr_exit are pointers in this scope to trace_item structs
 	push_pipeline(*tr_entry);
 	
 // SIMULATION OF A SINGLE CYCLE cpu IS TRIVIAL - EACH INSTRUCTION IS EXECUTED
@@ -252,6 +302,8 @@ int main(int argc, char **argv)
       }
     }
   }
+  
+  
   
   trace_uninit();
 
