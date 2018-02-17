@@ -17,7 +17,7 @@ if(BranchTable[entryIndex]==null)
 	if(buff_stages[2].type == ti_BRANCH)
 	{//Is instruction a branch
 		//Instruction is a branch
-		if(tr_entry->PC == buff_stages[2]->Addr) 
+		if(tr_entry->PC == buff_stages[2].Addr) 
 		{//Is the branch taken
 			//Correct the PC;
 			tr_entry->type = ti_NOP;
@@ -28,7 +28,7 @@ if(BranchTable[entryIndex]==null)
 		}
 		else 
 		{
-			BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, ARGV[2], 0);
+			BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, ARGV[1], 0);
 			BranchTable[entryindex].targetAddr = buff_stages[2].Addr;
 			BranchTable[entryindex].branchPC = buff_stages[2].PC;
 		}
@@ -47,7 +47,7 @@ else{//Prediction is in BTB
 	{
 		tr_entry->type = ti_NOP
 		buff_stages[0].type = ti_NOP //Maybe send in noops in first place instead of squashing
-		BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, ARGV[2], 1);
+		BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, ARGV[1], 1);
 		BranchTable[entryindex].targetAddr = buff_stages[2].Addr;
 		BranchTable[entryindex].branchPC = buff_stages[2].PC;
 	}
@@ -56,20 +56,20 @@ else{//Prediction is in BTB
 
 int checkPrediction(int s,int p)
 {
-	if(s == 2)
+	if(s == 2)//If two bit branch prediction
 	{
-		if(p==0 || p==1)
+		if(p==0 || p==1)//00 or 01
 		{
-			return 0;
-		}elseif(p==2 || p==3)
+			return 0;//branch not taken
+		}elseif(p==2 || p==3)//10 or 11
 		{
-			return 1;
+			return 1; //branch taken
 		}else
 		{
 			printf("INVALID p");
 			return null;
 		}
-	}elseif(s == 1)
+	}elseif(s == 1)//If one bit branch prediciton
 	{
 		return p;
 	}else
