@@ -35,13 +35,12 @@ if(BranchTable[entryIndex]==null)
 	}
 	else 
 	{//Instruction is not a branch
-		//Proceed as normal;
-	}
+		break;
 else{//Prediction is in BTB
 	currentPC = BranchTable[entryIndex].branchPC;
 	if(buff_stages[2].Addr == buff_stages[1].PC) //Was prediction correct
 	{
-		//Proceed as normal;
+		break;
 	}
 	else	
 	{
