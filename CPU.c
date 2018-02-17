@@ -10,17 +10,23 @@
 #include <arpa/inet.h>
 #include "CPU.h" 
 
-//Allocation of memory for instructions
-struct trace_item buff_stages[7];
-int stall_flag = 0;
 
+struct trace_item buff_stages[7]; //Allocation of memory for instructions
+int stall_flag = 0;				  //Tells push_pipline() to stall
+int prediction_method = 0;		  //Defaults to 0
 
+/* Function: init_pipeline
+ * ------------------------
+ * Initializes the buff_stages[] array with NOOPs. This is to flush out any garbage data that
+ * may be in there before buff_stages[7] is printed.
+ *
+ * returns: NULL  (buff_stages[] is global so it should already be usable by all other methods once modified)
+ */
 void init_pipeline(){
 	int i;
 	for(i = 0; i < 7; i++){
 		buff_stages[i].type = ti_NOP;
 	}
-	
 }
 
 /* Function: check_hazards
@@ -55,15 +61,15 @@ void check_hazards(struct trace_item entry){
 	}*/
 	
 	//Data Hazard A
-	if(buff_stages[3].type==ti_LOAD&&((buff_stages[2].type==(ti_RTYPE||ti_STORE||ti_BRANCH)&&buff_stages[3].dReg==buff_stages[2].sReg_a||buff_stages[3].dReg==buff_stages[2].sReg_b)||(buff_stages[2].type==ti_ITYPE&&buff_stages[3].dReg==buff_stages[2].sReg_a))){
+	if(buff_stages[2].type==ti_LOAD&&((buff_stages[1].type==(ti_RTYPE||ti_STORE||ti_BRANCH)&&buff_stages[2].dReg==buff_stages[1].sReg_a||buff_stages[2].dReg==buff_stages[1].sReg_b)||(buff_stages[1].type==ti_ITYPE&&buff_stages[2].dReg==buff_stages[1].sReg_a))){
 		stall_flag = 1;
 		
 	//Data Hazard B
-	}else if(buff_stages[4].type==ti_LOAD&&((buff_stages[2].type==(ti_RTYPE||ti_STORE||ti_BRANCH)&&buff_stages[4].dReg==buff_stages[2].sReg_a||buff_stages[3].dReg==buff_stages[2].sReg_b)||(buff_stages[2].type==ti_ITYPE&&buff_stages[4].dReg==buff_stages[2].sReg_a))){
+	}else if(buff_stages[3].type==ti_LOAD&&((buff_stages[1].type==(ti_RTYPE||ti_STORE||ti_BRANCH)&&buff_stages[3].dReg==buff_stages[1].sReg_a||buff_stages[2].dReg==buff_stages[1].sReg_b)||(buff_stages[1].type==ti_ITYPE&&buff_stages[3].dReg==buff_stages[1].sReg_a))){
 		stall_flag = 2;
 		
 	//Structural Hazard	
-	}else if(buff_stages[4].type==(ti_RTYPE||ti_ITYPE||ti_LOAD) && (buff_stages[1].type!=ti_JTYPE)){
+	}else if(buff_stages[3].type==(ti_RTYPE||ti_ITYPE||ti_LOAD) && (buff_stages[0].type!=ti_JTYPE)){
 		stall_flag = 3;
 	
 	//No hazard detected
