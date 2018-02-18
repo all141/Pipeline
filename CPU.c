@@ -132,7 +132,7 @@ void push_pipeline(struct trace_item entry){
 		buff_stages[5] = buff_stages[4];
 		buff_stages[4] = buff_stages[3];
 		buff_stages[3] = buff_stages[2];
-		buff_stages[2].type = ti_NOP; //SQUASHED
+		buff_stages[2].type = 9; //SQUASHED
 	}else{
 		buff_stages[6] = buff_stages[5];
 		buff_stages[5] = buff_stages[4];
@@ -416,12 +416,11 @@ int main(int argc, char **argv)
     if (trace_view_on) {// print the executed instruction if trace_view_on = 1 
       switch(buff_stages[6].type) {
         case ti_NOP:
-		  if(squash_print > 2){
-		  printf("[cycle %d] SQUASH:\n", cycle_number);
-		  }else{
-			  printf("[cycle %d] NOP:\n",cycle_number) ;
-		  }
-          break;
+			printf("[cycle %d] NOP:\n",cycle_number);
+			break;
+		case 9:
+			printf("[cycle %d] SQUASH:\n", cycle_number);
+			break;
         case ti_RTYPE:
           printf("[cycle %d] RTYPE:",cycle_number) ;
           printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(dReg: %d) \n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].sReg_b, buff_stages[6].dReg);
