@@ -13,10 +13,14 @@
 
 struct trace_item buff_stages[8];	//Allocation of memory for instructions
 struct BranchEntry BranchTable[64]; //BTB is an array of Branch entry structs
-int stall_flag = 0;				 	//Tells push_pipline() to stall
+
 int prediction_method = 0;		  	//Defaults to 0
+
+/*** Flags **/
+int stall_flag = 0;				 	//Tells push_pipline() to stall
 int squash_flag = 0;
 int squash_print = 2;
+int prediction_correct = 0;			// Set by branch_prediction() / read by check_hazards(); 0 = Branch prediction was incorrect / 1 = Branch prediction was correct
 
 /* Function: init_pipeline
  * ------------------------
@@ -63,14 +67,10 @@ void check_hazards(struct trace_item entry){
 	   buff_stages[2].type == ti_JRTYPE){
 		   
 		//PC of new instruction is same as branch/jump target address
-		if(buff_stages[1].PC == buff_stages[2].Addr){
+		if((buff_stages[1].PC == buff_stages[2].Addr) && prediction_correct == 0){
 			printf("CONTROL HAZARD\nPC of [1]: (%x), PC of EX/MEM1 : (%x)\n", buff_stages[1].PC, buff_stages[3].Addr);
 			squash_flag = 3;
 			squash_print = 5;
-			/*buff_stages[0].type = ti_NOP;
-			buff_stages[1].type = ti_NOP;
-			entry.type = ti_NOP;
-			//buff_stages[2].type = ti_NOP;*/
 		}
 		
 	//Structural Hazard
@@ -194,6 +194,14 @@ int checkPrediction(int s, int p){
 
 //P = prediction s = prediction style given by starting arguments.
 //If hitMiss = 1 then update to hit else update to miss
+/* Function: updatePrediction 
+ * --------------------------
+ * This function
+ *
+ * p: Prediction
+ * s: Prediction style determined by program arguments
+ *
+ */
 int updatePrediction(int p, int s, int hitMiss)
 {
 	switch(s)
@@ -264,48 +272,54 @@ int updatePrediction(int p, int s, int hitMiss)
 	}
 }
 
+/* Function: branch_prediction
+ * ---------------------------
+ * This function 
+ *
+ * entry: the next trace_item to be pushed into buff_stages[0]
+ *
+ * return: NULL
+ */
 int branch_prediction(struct trace_item entry)
 {
-	int currentPC = entry->PC;
+	int currentPC = hexToDec(entry.PC);
 	int entryIndex = getIndex(currentPC); 
-	if(BranchTable[entryIndex]==null)
+	if(BranchTable[entryIndex] == NULL)
 	{//No prediction available
 		if(buff_stages[0].type == ti_BRANCH)
 		{//Is instruction a branch
 			//Instruction is a branch
-			if(entry->PC == buff_stages[0].Addr) 
+			if(entry.PC == buff_stages[0].Addr) 
 			{//Is the branch taken
-				BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
-				BranchTable[entryindex].targetAddr = buff_stages[0].Addr;
-				BranchTable[entryindex].branchPC = buff_stages[0].PC;
+				BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
+				BranchTable[entryIndex].targetAddr = buff_stages[0].Addr;
+				BranchTable[entryIndex].branchPC = buff_stages[0].PC;
 				//SQUASH
 			}
 			else 
 			{
-				BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 0);
-				BranchTable[entryindex].targetAddr = buff_stages[0].Addr;
-				BranchTable[entryindex].branchPC = buff_stages[0].PC;
+				BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 0);
+				BranchTable[entryIndex].targetAddr = buff_stages[0].Addr;
+				BranchTable[entryIndex].branchPC = buff_stages[0].PC;
 			}
 		}
-		else 
-		{//Instruction is not a branch
-			break;
-	else{//Prediction is in BTB
-		currentPC = BranchTable[entryIndex].branchPC;
+	
+	}else{//Prediction is in BTB
+		currentPC = hexToDec(BranchTable[entryIndex].branchPC);
 		if(entry.PC == buff_stages[1].Addr) //Was prediction correct
 		{
-			break;
+			prediction_correct = 1;
 		}
 		else	
 		{
-			BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
-			BranchTable[entryindex].targetAddr = buff_stages[0].Addr;
-			BranchTable[entryindex].branchPC = buff_stages[0].PC;
-			//
-		}
+			BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
+			BranchTable[entryIndex].targetAddr = buff_stages[2].Addr;
+			BranchTable[entryIndex].branchPC = buff_stages[2].PC;
+			//squash
 		}
 	}
 }
+
 
 
 //BEGIN EXECUTION********************************************************************
@@ -316,6 +330,7 @@ int main(int argc, char **argv)
   size_t size;
   char *trace_file_name;
   int trace_view_on = 0;
+  
   int empty_flag = 0;
   int empty_count = 0;
   
@@ -371,7 +386,9 @@ int main(int argc, char **argv)
       cycle_number++;
     }  
 	
-	branch_prediction(*tr_entry);
+	if(prediction_method != 0){
+		branch_prediction(*tr_entry);
+	}
 
 	//Check for hazards before pushing the pipeline
 	check_hazards(*tr_entry);
