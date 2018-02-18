@@ -167,6 +167,109 @@ void push_pipeline(struct trace_item entry){
 	//check hazards here again?
 }
 
+//BTB**************************************************************************************************
+/**
+* Object in the BTB
+* Holds a one of two bit branch predictor, the pc that the branch evaluates to and the PC of the branch instruction
+*/
+struct BranchEntry {
+	int prediction;
+	char targetAddr[6];
+	char branchPC[6];
+}
+
+//See what the current prediciton is of an entry in the BTB
+int checkPrediction(int s, int p){
+	if(s == 2){
+		if(p==0 || p==1){
+			return 0;//branch not taken
+		}else if(p==2 || p==3){
+			return 1; //branch taken
+		}else{
+			printf("INVALID p");
+			system("exit");
+			}
+	}else if(s == 1){
+		return p;
+	}else{
+		printf("INVALID PREDICTION STYLE");
+		system("exit");
+		}
+}
+
+//P = prediction s = prediction style given by starting arguments.
+//If hitMiss = 1 then update to hit else update to miss
+int updatePrediction(int p, int s, int hitMiss)
+{
+	switch(s)
+	{
+		case 1://One Bit Predictor
+		if(hitMiss==0) {
+			return 0;
+		}else if(hitMiss==1) {
+			return 1;
+		}else{
+			printf("Invalid hitMiss!");
+			system("exit");
+		}
+		break;
+		case 2: //Two Bit Predictor
+			switch(p){
+				case 0://Predict Not Taken 00
+					if(hitMiss == 0){
+						return 0;//Predicition is 00
+					}else if(hitMiss == 1){
+						return 1; //Prediction is 01
+					}else{
+						printf("Invalid hitMiss");
+						system("exit");
+					}	
+				break;
+
+				case 1://Predict Not Taken 01
+					if(hitMiss == 0){
+						return 0;//Prediction is 00
+					}else if(hitMiss == 1){
+						return 3; //Prediction is 11
+					}else{
+						printf("Invalid hitMiss");
+						system("exit");
+					}
+				break;
+
+				case 2: //Predict Taken 10
+					if(hitMiss == 0){
+						return 0;//Prediciton is 00
+					}else if(hitMiss == 1){
+						return 3; //Prediction is 11
+					}else{
+						printf("Invalid hitMiss");
+						system("exit");
+					}
+				break;
+				case 3:
+					if(hitMiss == 0){
+						return 2; //Prediction is 10
+					}else if(hitMiss == 1){
+						return 3; //Prediction is 11
+					}else{
+						printf("Invalid hitMiss");
+						system("exit");
+					}	
+				break;
+
+				default:
+					printf("Invalid Prediction!");
+					system("exit");
+			}
+		break;
+		default:
+			printf("Invalid case!");
+			system("exit");
+	}
+}
+
+//BEGIN EXECUTION********************************************************************
 int main(int argc, char **argv)
 {
   
@@ -306,5 +409,3 @@ int main(int argc, char **argv)
   printf("+ Simulation terminates at cycle : %u\n", cycle_number);
   exit(0);
 }
-
-
