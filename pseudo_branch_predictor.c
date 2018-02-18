@@ -29,7 +29,7 @@ if(BranchTable[entryIndex]==null)
 		}
 		else 
 		{
-			BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, ARGV[1], 0);
+			BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, ARGV[2], 0);
 			BranchTable[entryindex].targetAddr = buff_stages[2].Addr;
 			BranchTable[entryindex].branchPC = buff_stages[2].PC;
 		}
@@ -47,7 +47,7 @@ else{//Prediction is in BTB
 	{
 		tr_entry->type = ti_NOP
 		buff_stages[0].type = ti_NOP
-		BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, ARGV[1], 1);
+		BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, ARGV[2], 1);
 		BranchTable[entryindex].targetAddr = buff_stages[2].Addr;
 		BranchTable[entryindex].branchPC = buff_stages[2].PC;
 		//SQUASH
