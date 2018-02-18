@@ -299,8 +299,8 @@ int branch_prediction(struct trace_item entry)
 		else	
 		{
 			BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
-			BranchTable[entryindex].targetAddr = buff_stages[2].Addr;
-			BranchTable[entryindex].branchPC = buff_stages[2].PC;
+			BranchTable[entryindex].targetAddr = buff_stages[0].Addr;
+			BranchTable[entryindex].branchPC = buff_stages[0].PC;
 			//
 		}
 		}
