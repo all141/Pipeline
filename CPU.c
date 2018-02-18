@@ -153,8 +153,8 @@ void push_pipeline(struct trace_item entry){
 */
 struct BranchEntry {
 	int prediction;
-	char targetAddr[6];
-	char branchPC[6];
+	int targetAddr;
+	int branchPC;
 };
 
 //Get the index to look up in the BTB using the address
@@ -167,7 +167,7 @@ int getIndex(int address){
 }
 
 //Convert Hexadecimal string address to a decimal to operate on
-int hexToDec(char *address){
+int hexToDec(char address){
         unsigned char decAddress = 0;
 	    decAddress = (unsigned char) strtoul(address, NULL, 16); //BASE 16 FOR HEX VALUES
 	return decAddress;
@@ -282,9 +282,9 @@ int updatePrediction(int p, int s, int hitMiss)
  */
 int branch_prediction(struct trace_item entry)
 {
-	int currentPC = hexToDec(entry.PC);
+	int currentPC = entry.PC;
 	int entryIndex = getIndex(currentPC); 
-	if(BranchTable[entryIndex] == NULL)
+	if((BranchTable[entryIndex].prediction == 0)&&(BranchTable[entryIndex].targetAddr == 0)&&(BranchTable[entryIndex].prediction == 0))
 	{//No prediction available
 		if(buff_stages[0].type == ti_BRANCH)
 		{//Is instruction a branch
@@ -292,20 +292,20 @@ int branch_prediction(struct trace_item entry)
 			if(entry.PC == buff_stages[0].Addr) 
 			{//Is the branch taken
 				BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
-				BranchTable[entryIndex].targetAddr = buff_stages[0].Addr;
-				BranchTable[entryIndex].branchPC = buff_stages[0].PC;
+				BranchTable[entryIndex].targetAddr = hexToDec(buff_stages[0].Addr);
+				BranchTable[entryIndex].branchPC = hexToDec(buff_stages[0].PC);
 				//SQUASH
 			}
 			else 
 			{
 				BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 0);
-				BranchTable[entryIndex].targetAddr = buff_stages[0].Addr;
-				BranchTable[entryIndex].branchPC = buff_stages[0].PC;
+				BranchTable[entryIndex].targetAddr = hexToDec(buff_stages[0].Addr);
+				BranchTable[entryIndex].branchPC = hexToDec(buff_stages[0].PC);
 			}
 		}
 	
 	}else{//Prediction is in BTB
-		currentPC = hexToDec(BranchTable[entryIndex].branchPC);
+		currentPC = BranchTable[entryIndex].branchPC;
 		if(entry.PC == buff_stages[1].Addr) //Was prediction correct
 		{
 			prediction_correct = 1;
@@ -313,14 +313,23 @@ int branch_prediction(struct trace_item entry)
 		else	
 		{
 			BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
-			BranchTable[entryIndex].targetAddr = buff_stages[2].Addr;
-			BranchTable[entryIndex].branchPC = buff_stages[2].PC;
+			BranchTable[entryIndex].targetAddr= hexToDec(buff_stages[2].Addr);
+			BranchTable[entryIndex].branchPC = (buff_stages[2].PC);
 			//squash
 		}
 	}
 }
 
-
+void init_branch_table()
+{
+	int i = 0;
+	for(i; i<64;i++)
+	{
+		BranchTable[i].prediction = 0;
+		BranchTable[i].targetAddr= 0;
+		BranchTable[i].branchPC = 0;
+	}
+}
 
 //BEGIN EXECUTION********************************************************************
 int main(int argc, char **argv)
@@ -367,7 +376,7 @@ int main(int argc, char **argv)
   }
 
   trace_init();
-
+  init_branch_table();
   init_pipeline();
   
   //Loop until the end of the trace file
