@@ -15,21 +15,31 @@ struct trace_item buff_stages[8];	//Allocation of memory for instructions
 struct BranchEntry BranchTable[64]; //BTB is an array of Branch entry structs
 
 int prediction_method = 0;		  	//Defaults to 0
+int prediction_correct = 0;			//Set by branch_prediction() / read by check_hazards(); 0 = Branch prediction was incorrect / 1 = Branch prediction was correct
 
-/*** Flags **/
 int stall_flag = 0;				 	//Tells push_pipline() to stall
 int squash_flag = 0;
-int squash_print = 2;
-int prediction_correct = 0;			// Set by branch_prediction() / read by check_hazards(); 0 = Branch prediction was incorrect / 1 = Branch prediction was correct
 
+struct BranchEntry {	//Struct to hold an entry in the branch prediction table
+	int prediction;
+	int targetAddr;
+	int branchPC;
+};
+
+//*******************************************************
+//****MAIN HELPER FUNCTIONS******************************
+//*******************************************************
 /* Function: init_pipeline
  * ------------------------
  * Writes NOOPS in all the buff_stages[] indexes. This is to flush out any garbage data that
  * may be in there from when buff_stages[] is initialized.
  *
+ * RETURN
  * returns: NULL  (buff_stages[] is global so it should already be usable by all other methods once modified)
+ * Globals: buff_stages[]
  */
-void init_pipeline(){
+void init_pipeline()
+{
 	int i;
 	for(i = 0; i < 8; i++){
 		buff_stages[i].type = ti_NOP;
@@ -41,24 +51,28 @@ void init_pipeline(){
  * This function is called before buff_stages[] is pushed by push_pipeline(). It detects any hazards that may occur during the current clock cycle. 
  * If a hazard is detected, this function modifies the 'stallflag' variable to indicate which hazard must be resolved.
  *
+ * PARAMETERS
  * entry: the next trace_item to be pushed into buff_stages[0]
  *
- * returns: NULL (buff_stages[] is global so it should already be usable by all other methods once modified)
+ * RETURN
+ * returns: NULL
+ * Globals: buff_stages[], stall_flag, squash_flag
  */
-void check_hazards(struct trace_item entry){
+void check_hazards(struct trace_item entry)
+{
 	
 	//Data Hazard A
 	if(buff_stages[3].type == ti_LOAD && 
 	  ((buff_stages[2].type == (ti_RTYPE||ti_STORE || ti_BRANCH) && (buff_stages[3].dReg == buff_stages[2].sReg_a || buff_stages[3].dReg == buff_stages[2].sReg_b))||
 	   (buff_stages[2].type == ti_ITYPE && buff_stages[3].dReg == buff_stages[2].sReg_a))){
-		   printf("DATA HAZARD A\nPC of ID/EX: (%x), PC of EX/MEM1: (%x)\n", buff_stages[2].PC, buff_stages[3].PC);
+		   //printf("DATA HAZARD A\nPC of ID/EX: (%x), PC of EX/MEM1: (%x)\n", buff_stages[2].PC, buff_stages[3].PC);
 			stall_flag = 1;
 		
 	//Data Hazard B
 	}else if(buff_stages[4].type == ti_LOAD &&
 			((buff_stages[2].type == (ti_RTYPE || ti_STORE || ti_BRANCH) && (buff_stages[4].dReg == buff_stages[2].sReg_a || buff_stages[4].dReg == buff_stages[2].sReg_b))||
 			 (buff_stages[2].type == ti_ITYPE && buff_stages[4].dReg == buff_stages[2].sReg_a))){
-				printf("DATA HAZARD B\nPC of Id/EX: (%x), PC of MEM1/MEM2: (%x)\n", buff_stages[2].PC, buff_stages[4].PC);
+				//printf("DATA HAZARD B\nPC of Id/EX: (%x), PC of MEM1/MEM2: (%x)\n", buff_stages[2].PC, buff_stages[4].PC);
 		stall_flag = 2;
 		
 	//Control Hazard
@@ -68,14 +82,13 @@ void check_hazards(struct trace_item entry){
 		   
 		//PC of new instruction is same as branch/jump target address
 		if((buff_stages[1].PC == buff_stages[2].Addr) && prediction_correct == 0){
-			printf("CONTROL HAZARD\nPC of [1]: (%x), PC of EX/MEM1 : (%x)\n", buff_stages[1].PC, buff_stages[3].Addr);
+			//printf("CONTROL HAZARD\nPC of [1]: (%x), PC of EX/MEM1 : (%x)\n", buff_stages[1].PC, buff_stages[3].Addr);
 			squash_flag = 3;
-			squash_print = 5;
 		}
 		
 	//Structural Hazard
 	}else if(buff_stages[5].type == (ti_RTYPE || ti_ITYPE || ti_LOAD) && (buff_stages[1].type != ti_JTYPE)){
-		printf("STRUCTURAL HAZARD\nPC of buff[5]: (%x), PC of buff[1]: (%x)\n", buff_stages[5].PC, buff_stages[1].PC);
+		//printf("STRUCTURAL HAZARD\nPC of buff[5]: (%x), PC of buff[1]: (%x)\n", buff_stages[5].PC, buff_stages[1].PC);
 		stall_flag = 3;
 	
 	//No hazard detected
@@ -90,39 +103,35 @@ void check_hazards(struct trace_item entry){
  * Push instructions in the buff_stages array to the next index (stage). This method will look at the 'stallflag' variable to see if any NOOPs need to
  * be injected into the buff_stages[] due to hazards detected by the check_hazards() method. 
  *
+ * PARAMETERS
  * entry: the next trace_item to be pushed into buff_stages[0] 
- * exiting: the trace_item that is being pushed out of the pipeline (pushed out of buff_stage[5])
  *
- * returns: exiting (buff_stages[] is global so it should already be usable by all other methods once modified)
- *
- * Function Call: push_pipeline(*tr_entry, &tr_exit)
+ * RETURN
+ * returns: NULL
+ * Globals: buff_stages[]
  */
-void push_pipeline(struct trace_item entry){		
+void push_pipeline(struct trace_item entry)
+{		
 	
 	if(stall_flag != 0){ //stallflag = 0 by default, which means no stalling would be needed
 		if(stall_flag == 1){ // Stall for data hazard A	
-		    //printf("Data Hazard A\n");
 			buff_stages[6] = buff_stages[5];
 			buff_stages[5] = buff_stages[4];
 			buff_stages[4] = buff_stages[3];
 			buff_stages[3].type = ti_NOP;
 			
 		}else if(stall_flag == 2){ //Stall for data hazard B
-			//printf("Data Hazard B\n");
-			//printf("PC of [2]: %x, PC of [4]: %x \n", buff_stages[2].PC, buff_stages[4].PC);
 			buff_stages[6] = buff_stages[5];
 			buff_stages[5] = buff_stages[4];
 			buff_stages[4].type = ti_NOP;
 			
 		}else if(stall_flag == 3){ //Stall for structural hazard
-			//printf("Structural Hazard\n");
 			buff_stages[6] = buff_stages[5];
 			buff_stages[5] = buff_stages[4];
 			buff_stages[4] = buff_stages[3];
 			buff_stages[3].type = ti_NOP;
 			
-		}else{
-			//stallflag should never be something other than 0,1,2,3
+		}else{ //stall_flag should never be something other than 0,1,2,3
 			printf("Invalid value of stall_flag");
 			exit(0);
 		}	
@@ -142,39 +151,64 @@ void push_pipeline(struct trace_item entry){
 		buff_stages[1] = buff_stages[0];
 		buff_stages[0] = entry;
 	}
-	
-	//check hazards here again?
 }
 
-//BTB**************************************************************************************************
-/**
-* Object in the BTB
-* Holds a one of two bit branch predictor, the pc that the branch evaluates to and the PC of the branch instruction
-*/
-struct BranchEntry {
-	int prediction;
-	int targetAddr;
-	int branchPC;
-};
 
-//Get the index to look up in the BTB using the address
-int getIndex(int address){
+//*****************************************************
+//****BRANCH PREDICTION TABLE AND FUNCTIONS************
+//*****************************************************
+/* Function: getIndex
+ * ------------------
+ * This function hashes the prediction table index from the instruction program counter.
+ *
+ * PARAMETERS
+ * address: the memory address of the instruction being checked in the table
+ *
+ * RETURN
+ * returns: a: the hashed index of 'address'
+ * Globals: None
+ */
+int getIndex(int address)
+{
 	int a = address;
-	a = a % 1024;//2048, 512 for different branch table sizes ALSO get final 8 bits
-	a = a / 8; //Get bits 8-3
-	a = a % 64; //INDEX
+	a = a % 1024;	//2048, 512 for different branch table sizes ALSO get final 8 bits
+	a = a / 8; 		//Get bits 8-3
+	a = a % 64; 	//INDEX
 	return a;
 }
 
-//Convert Hexadecimal string address to a decimal to operate on
-int hexToDec(char address){
+/* Function: hexToDec
+ * ------------------
+ * This function converts a hexadecimal value to a decimal value.
+ *
+ * PARAMETERS
+ * address: the hex value (in our case the PC address) to be converted to decimal
+ *
+ * RETURN
+ * returns: decAddress: original hex 'address' value in decimal
+ * Globals: none
+ */
+int hexToDec(char address)
+{
         unsigned char decAddress = 0;
 	    decAddress = (unsigned char) strtoul(address, NULL, 16); //BASE 16 FOR HEX VALUES
 	return decAddress;
 }
 
-//See what the current prediciton is of an entry in the BTB
-int checkPrediction(int s, int p){
+/* Function: checkPrediction
+ * -------------------------
+ * This function makes a prediction based on the prediction style specified by the user
+ *
+ * PARAMETERS
+ * s: prediction style given by the starting arguements (no prediction, 1-bit, or 2-bit)
+ * p: actual prediction
+ *
+ * RETURN
+ * returns: p: the prediction that was made
+ * Globals: none
+ */
+int checkPrediction(int s, int p)
+{
 	if(s == 2){
 		if(p==0 || p==1){
 			return 0;//branch not taken
@@ -192,18 +226,22 @@ int checkPrediction(int s, int p){
 		}
 }
 
-//P = prediction s = prediction style given by starting arguments.
-//If hitMiss = 1 then update to hit else update to miss
 /* Function: updatePrediction 
  * --------------------------
- * This function
+ * This function updates a prediction for a branch prediction table entry. It determines the style of predictor (1-bit, 2-bit) and whether
+ * the branch was taken or not the previous time the branch was seen by the table.
  *
- * p: Prediction
- * s: Prediction style determined by program arguments
+ * PARAMETERS
+ * p: value of the prediction from the table
+ * s: prediction style determined by program arguments
+ * hitMiss: whther the previous prediction was accurate or not
  *
+ * RETURN
+ * returns: an integer literal based on what the new prediction is
  */
 int updatePrediction(int p, int s, int hitMiss)
 {
+	//If hitMiss = 1 then update to hit else update to miss
 	switch(s)
 	{
 		case 1://One Bit Predictor
@@ -274,13 +312,17 @@ int updatePrediction(int p, int s, int hitMiss)
 
 /* Function: branch_prediction
  * ---------------------------
- * This function 
+ * This function will first check if a prediction is available for the current branch instructions. It will then determine if the existing prediction was correct
+ * or add the new instruction to the prediction table if no previous prediction exists.
  *
+ * PARAMETERS
  * entry: the next trace_item to be pushed into buff_stages[0]
  *
- * return: NULL
+ * RETURN
+ * returns: NULL
+ * Globals: BranchTable[]
  */
-int branch_prediction(struct trace_item entry)
+void branch_prediction(struct trace_item entry)
 {
 	int currentPC = entry.PC;
 	int entryIndex = getIndex(currentPC); 
@@ -320,6 +362,14 @@ int branch_prediction(struct trace_item entry)
 	}
 }
 
+/* Function: init_branch_table
+ * ---------------------------
+ * This function initializes the BranchTable[] array to be used as the branch prediction table.
+ * 
+ * RETURN
+ * returns: NULL
+ * Globals: BranchTable[]
+ */
 void init_branch_table()
 {
 	int i = 0;
@@ -331,7 +381,7 @@ void init_branch_table()
 	}
 }
 
-//BEGIN EXECUTION********************************************************************
+//***********MAIN*****************//
 int main(int argc, char **argv)
 {
   
@@ -340,8 +390,8 @@ int main(int argc, char **argv)
   char *trace_file_name;
   int trace_view_on = 0;
   
-  int empty_flag = 0;
-  int empty_count = 0;
+  int empty_flag = 0;		//Flag to tell when we have reached the end of the trace file
+  int empty_count = 0;      //Used to count down number of cycles need to push final instruction out of the pipeline
   
   unsigned char t_type = 0;
   unsigned char t_sReg_a= 0;
@@ -376,14 +426,15 @@ int main(int argc, char **argv)
   }
 
   trace_init();
-  init_branch_table();
-  init_pipeline();
+  init_branch_table();	//Initialize the branch table
+  init_pipeline();		//Initialize the pipeline
   
   //Loop until the end of the trace file
   while(1) {
 	if((stall_flag == 0) || (empty_flag != 0) || (squash_flag != 0)){
 		size = trace_get_item(&tr_entry); //Fetch next instruction
 	}    
+	
     stall_flag = 0; //Reset stall_flag
 	
     if (!size) {       /* no more instructions (trace_items) to simulate */
@@ -409,8 +460,6 @@ int main(int argc, char **argv)
 	if(empty_flag == 1){
 		empty_count++;
 		cycle_number++;
-		
-		//push_pipeline();
 	}
 	
     if (trace_view_on) {// print the executed instruction if trace_view_on = 1 
@@ -418,7 +467,7 @@ int main(int argc, char **argv)
         case ti_NOP:
 			printf("[cycle %d] NOP:\n",cycle_number);
 			break;
-		case 9:
+		case 9:	//Print the 'squashed' instruction
 			printf("[cycle %d] SQUASH:\n", cycle_number);
 			break;
         case ti_RTYPE:
