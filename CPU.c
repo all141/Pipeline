@@ -11,16 +11,17 @@
 #include "CPU.h" 
 
 
-struct trace_item buff_stages[8]; //Allocation of memory for instructions
-int stall_flag = 0;				  //Tells push_pipline() to stall
-int prediction_method = 0;		  //Defaults to 0
+struct trace_item buff_stages[8];	//Allocation of memory for instructions
+struct BranchEntry BranchTable[64]; //BTB is an array of Branch entry structs
+int stall_flag = 0;				 	//Tells push_pipline() to stall
+int prediction_method = 0;		  	//Defaults to 0
 int squash_flag = 0;
 int squash_print = 2;
 
 /* Function: init_pipeline
  * ------------------------
- * Initializes the buff_stages[] array with NOOPs. This is to flush out any garbage data that
- * may be in there before buff_stages[7] is printed.
+ * Writes NOOPS in all the buff_stages[] indexes. This is to flush out any garbage data that
+ * may be in there from when buff_stages[] is initialized.
  *
  * returns: NULL  (buff_stages[] is global so it should already be usable by all other methods once modified)
  */
@@ -31,35 +32,16 @@ void init_pipeline(){
 	}
 }
 
-
-
 /* Function: check_hazards
  * -----------------------
- * This method is called before buff_stages[] is pushed by push_pipeline(). It detects any hazards that may occur during the current clock cycle. 
- * If a hazard is detected, this method modifies the 'stallflag' variable to indicate which hazard must be resolved.
+ * This function is called before buff_stages[] is pushed by push_pipeline(). It detects any hazards that may occur during the current clock cycle. 
+ * If a hazard is detected, this function modifies the 'stallflag' variable to indicate which hazard must be resolved.
  *
  * entry: the next trace_item to be pushed into buff_stages[0]
  *
  * returns: NULL (buff_stages[] is global so it should already be usable by all other methods once modified)
  */
 void check_hazards(struct trace_item entry){
-	
-	//This needs to play nice with the branch prediction
-	//Control Hazard
-	/*if(buff_stages[3]->type == BRANCH ||
-	   buff_stages[3]->type == JTYPE ||
-	   buff_stages[3]->type == JRTYPE){
-		   
-		//PC of new instruction is same as branch/jump target address
-		if(entry->PC == buff_stages[3]->Addr){
-			buff_stages[0]-> type = NOP;
-			buff_stages[1]-> type = NOP;
-			buff_stages[2]-> type = NOP;
-		}
-	}*/
-	
-	/* What is the hierarchy of hazard checks? Data > Control > Structural 
-	*/
 	
 	//Data Hazard A
 	if(buff_stages[3].type == ti_LOAD && 
@@ -103,9 +85,6 @@ void check_hazards(struct trace_item entry){
 	
 }
 
-// ******NOTE***** What if there is more than one hazard during a cycle? Should we have a way to loop to check for and then resolve multiple hazards?
-// Possible Answer?: Rerun the hazard check after any hazard is detected and dealt with. Should work as long as there is a correct heiarchy of hazard detection.
-// Possible Answer? Cont.: Maybe put in call to hazard check after every stage of this if-else for the stall flags unless there is no flag.
 /* Function: push_pipeline
  * -----------------------
  * Push instructions in the buff_stages array to the next index (stage). This method will look at the 'stallflag' variable to see if any NOOPs need to
@@ -284,30 +263,28 @@ int updatePrediction(int p, int s, int hitMiss)
 			system("exit");
 	}
 }
-int branch_prediction(struct trace_item tr_entry)
+
+int branch_prediction(struct trace_item entry)
 {
-	int currentPC = tr_entry->PC;
+	int currentPC = entry->PC;
 	int entryIndex = getIndex(currentPC); 
 	if(BranchTable[entryIndex]==null)
 	{//No prediction available
-		if(buff_stages[2].type == ti_BRANCH)
+		if(buff_stages[0].type == ti_BRANCH)
 		{//Is instruction a branch
 			//Instruction is a branch
-			if(tr_entry->PC == buff_stages[2].Addr) 
+			if(entry->PC == buff_stages[0].Addr) 
 			{//Is the branch taken
-				//Correct the PC;
-				tr_entry->type = ti_NOP;
-				buff_stages[0].type = ti_NOP
-				BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, ARGV[2], 1);
-				BranchTable[entryindex].targetAddr = buff_stages[2].Addr;
-				BranchTable[entryindex].branchPC = buff_stages[2].PC;
+				BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
+				BranchTable[entryindex].targetAddr = buff_stages[0].Addr;
+				BranchTable[entryindex].branchPC = buff_stages[0].PC;
 				//SQUASH
 			}
 			else 
 			{
-				BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, ARGV[2], 0);
-				BranchTable[entryindex].targetAddr = buff_stages[2].Addr;
-				BranchTable[entryindex].branchPC = buff_stages[2].PC;
+				BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 0);
+				BranchTable[entryindex].targetAddr = buff_stages[0].Addr;
+				BranchTable[entryindex].branchPC = buff_stages[0].PC;
 			}
 		}
 		else 
@@ -315,18 +292,16 @@ int branch_prediction(struct trace_item tr_entry)
 			break;
 	else{//Prediction is in BTB
 		currentPC = BranchTable[entryIndex].branchPC;
-		if(buff_stages[2].Addr == buff_stages[1].PC) //Was prediction correct
+		if(entry.PC == buff_stages[1].Addr) //Was prediction correct
 		{
 			break;
 		}
 		else	
 		{
-			tr_entry->type = ti_NOP
-			buff_stages[0].type = ti_NOP
-			BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, ARGV[2], 1);
+			BranchTable[entryindex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
 			BranchTable[entryindex].targetAddr = buff_stages[2].Addr;
 			BranchTable[entryindex].branchPC = buff_stages[2].PC;
-			//SQUASH
+			//
 		}
 		}
 	}
@@ -343,9 +318,6 @@ int main(int argc, char **argv)
   int trace_view_on = 0;
   int empty_flag = 0;
   int empty_count = 0;
-  
-//BTB is an array of Branch entry structs
-struct BranchEntry BranchTable[64];
   
   unsigned char t_type = 0;
   unsigned char t_sReg_a= 0;
@@ -397,26 +369,15 @@ struct BranchEntry BranchTable[64];
     }
     else{              /* parse the next instruction to simulate */
       cycle_number++;
-      /*t_type = tr_entry->type;
-      t_sReg_a = tr_entry->sReg_a;
-      t_sReg_b = tr_entry->sReg_b;
-      t_dReg = tr_entry->dReg;
-      t_PC = tr_entry->PC;
-      t_Addr = tr_entry->Addr;*/
     }  
 	
 	branch_prediction(*tr_entry);
-	/* At this point, we have fetched the next instruction to be enter the pipeline.	
-	 * We must check for hazards that will occur in this cycle before we push the pipeline.
-	*/
+
 	//Check for hazards before pushing the pipeline
 	check_hazards(*tr_entry);
 	
-	//resolve hazards and push instructions in buff_stages[] to next index
+	//Resolve hazards and push instructions in buff_stages[] to next index
 	push_pipeline(*tr_entry);
-	
-// SIMULATION OF A SINGLE CYCLE cpu IS TRIVIAL - EACH INSTRUCTION IS EXECUTED
-// IN ONE CYCLE
 	
 	//Cleaning out pipeline 
 	if(empty_flag == 1){
@@ -425,7 +386,8 @@ struct BranchEntry BranchTable[64];
 		
 		//push_pipeline();
 	}
-    if (trace_view_on) {// print the executed instruction if trace_view_on=1 
+	
+    if (trace_view_on) {// print the executed instruction if trace_view_on = 1 
       switch(buff_stages[6].type) {
         case ti_NOP:
 		  if(squash_print > 2){
