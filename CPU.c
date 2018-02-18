@@ -15,6 +15,7 @@ struct trace_item buff_stages[8]; //Allocation of memory for instructions
 int stall_flag = 0;				  //Tells push_pipline() to stall
 int prediction_method = 0;		  //Defaults to 0
 int squash_flag = 0;
+int squash_print = 2;
 
 /* Function: init_pipeline
  * ------------------------
@@ -83,7 +84,7 @@ void check_hazards(struct trace_item entry){
 		if(buff_stages[1].PC == buff_stages[2].Addr){
 			printf("CONTROL HAZARD\nPC of [1]: (%x), PC of EX/MEM1 : (%x)\n", buff_stages[1].PC, buff_stages[3].Addr);
 			squash_flag = 3;
-			
+			squash_print = 5;
 			/*buff_stages[0].type = ti_NOP;
 			buff_stages[1].type = ti_NOP;
 			entry.type = ti_NOP;
@@ -214,7 +215,7 @@ int main(int argc, char **argv)
   
   //Loop until the end of the trace file
   while(1) {
-	if((stall_flag == 0) || (empty_flag != 0)){
+	if((stall_flag == 0) || (empty_flag != 0) || (squash_flag != 0)){
 		size = trace_get_item(&tr_entry); //Fetch next instruction
 	}    
     stall_flag = 0; //Reset stall_flag
@@ -246,18 +247,22 @@ int main(int argc, char **argv)
 	
 // SIMULATION OF A SINGLE CYCLE cpu IS TRIVIAL - EACH INSTRUCTION IS EXECUTED
 // IN ONE CYCLE
-
+	
+	//Cleaning out pipeline 
 	if(empty_flag == 1){
 		empty_count++;
-		if(empty_count >= 6){
-			break;
-		}
+		cycle_number++;
+		
 		//push_pipeline();
 	}
     if (trace_view_on) {// print the executed instruction if trace_view_on=1 
       switch(buff_stages[6].type) {
         case ti_NOP:
-          printf("[cycle %d] NOP:\n",cycle_number) ;
+		  if(squash_print > 2){
+		  printf("[cycle %d] SQUASH:\n", cycle_number);
+		  }else{
+			  printf("[cycle %d] NOP:\n",cycle_number) ;
+		  }
           break;
         case ti_RTYPE:
           printf("[cycle %d] RTYPE:",cycle_number) ;
@@ -292,6 +297,9 @@ int main(int argc, char **argv)
           break;
       }
     }
+	if(empty_count >= 6){
+			break;
+		}
   }
   trace_uninit();
   
