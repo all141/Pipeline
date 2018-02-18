@@ -55,29 +55,22 @@ else{//Prediction is in BTB
     }
 }
 
-int checkPrediction(int s,int p)
-{
-	if(s == 2)//If two bit branch prediction
-	{
-		if(p==0 || p==1)//00 or 01
-		{
+int checkPrediction(int s,int p){
+	if(s == 2){
+		if(p==0 || p==1){
 			return 0;//branch not taken
-		}elseif(p==2 || p==3)//10 or 11
-		{
+		}else if(p==2 || p==3){
 			return 1; //branch taken
-		}else
-		{
+		}else{
 			printf("INVALID p");
-			return null;
-		}
-	}elseif(s == 1)//If one bit branch prediciton
-	{
+			system("exit");
+			}
+	}else if(s == 1){
 		return p;
-	}else
-	{
+	}else{
 		printf("INVALID PREDICTION STYLE");
-		return null;
-	}
+		system("exit");
+		}
 }
 
 //P = prediction s = prediction style given by starting arguments.
@@ -87,88 +80,70 @@ int updatePrediction(int p, int s, int hitMiss)
 	switch(s)
 	{
 		case 1://One Bit Predictor
-		if(hitMiss==0) //Predict Not Taken
-		{
+		if(hitMiss==0) {
 			return 0;
-		}elseif(hitMiss==1) //Predict Taken
-		{
+		}else if(hitMiss==1) {
 			return 1;
-		}else
-		{
+		}else{
 			printf("Invalid hitMiss!");
-			return null;
+			system("exit");
 		}
 		break;
 		case 2: //Two Bit Predictor
-			switch(p)
-			{
+			switch(p){
 				case 0://Predict Not Taken 00
-					if(hitMiss == 0)//Still predict not taken
-					{
+					if(hitMiss == 0){
 						return 0;//Predicition is 00
-					}elseif(hitMiss == 1)//Predict Taken
-					{
+					}else if(hitMiss == 1){
 						return 1; //Prediction is 01
-					}else
-					{
+					}else{
 						printf("Invalid hitMiss");
-						return null;
+						system("exit");
 					}	
 				break;
 
 				case 1://Predict Not Taken 01
-					if(hitMiss == 0)//Still predict not taken
-					{
+					if(hitMiss == 0){
 						return 0;//Prediction is 00
-					}elseif(hitMiss == 1)//Predict Taken
-					{
+					}else if(hitMiss == 1){
 						return 3; //Prediction is 11
-					}else
-					{
+					}else{
 						printf("Invalid hitMiss");
-						return null;
+						system("exit");
 					}
 				break;
 
 				case 2: //Predict Taken 10
-					if(hitMiss == 0)//Predict not taken
-					{
+					if(hitMiss == 0){
 						return 0;//Prediciton is 00
-					}elseif(hitMiss == 1)//Predict Taken
-					{
+					}else if(hitMiss == 1){
 						return 3; //Prediction is 11
-					}else
-					{
+					}else{
 						printf("Invalid hitMiss");
-						return null;
+						system("exit");
 					}
 				break;
-
 				case 3:
-					if(hitMiss == 0)//Predict not taken
-					{
+					if(hitMiss == 0){
 						return 2; //Prediction is 10
-					}elseif(hitMiss == 1)//Predict Taken
-					{
+					}else if(hitMiss == 1){
 						return 3; //Prediction is 11
-					}else
-					{
+					}else{
 						printf("Invalid hitMiss");
-						return null;
+						system("exit");
 					}	
 				break;
 
 				default:
 					printf("Invalid Prediction!");
-					return null;
+					system("exit");
 			}
 		break;
 		default:
 			printf("Invalid case!");
-			return null;
+			system("exit");
 	}
 }
-
 *******************************************************************************************
 //BTB
 /**
