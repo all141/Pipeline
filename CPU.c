@@ -234,7 +234,7 @@ int checkPrediction(int s, int p)
  * PARAMETERS
  * p: value of the prediction from the table
  * s: prediction style determined by program arguments
- * hitMiss: whther the previous prediction was accurate or not
+ * hitMiss: whther the previous prediction was taken or not
  *
  * RETURN
  * returns: an integer literal based on what the new prediction is
@@ -324,40 +324,45 @@ int updatePrediction(int p, int s, int hitMiss)
  */
 void branch_prediction(struct trace_item entry)
 {
-	int currentPC = entry.PC;
+	int currentPrediction = 0;
+	int currentPC = buff_stages[0].PC;
 	int entryIndex = getIndex(currentPC); 
 	if((BranchTable[entryIndex].prediction == 0)&&(BranchTable[entryIndex].targetAddr == 0)&&(BranchTable[entryIndex].prediction == 0))
 	{//No prediction available
-		if(buff_stages[0].type == ti_BRANCH)
+		if(buff_stages[0].type == ti_BRANCH || buff_stages[0].type == ti_JTYPE || buff_stages[0].type == ti_JRTYPE)
 		{//Is instruction a branch
 			//Instruction is a branch
 			if(entry.PC == buff_stages[0].Addr) 
 			{//Is the branch taken
-				BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
-				BranchTable[entryIndex].targetAddr = hexToDec(buff_stages[0].Addr);
-				BranchTable[entryIndex].branchPC = hexToDec(buff_stages[0].PC);
-				//SQUASH
+				BranchTable[entryIndex].prediction =updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
+				BranchTable[entryIndex].targetAddr = buff_stages[0].Addr;
+				BranchTable[entryIndex].branchPC = buff_stages[0].PC;
+				prediction_correct = 0;
 			}
 			else 
 			{
 				BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 0);
-				BranchTable[entryIndex].targetAddr = hexToDec(buff_stages[0].Addr);
-				BranchTable[entryIndex].branchPC = hexToDec(buff_stages[0].PC);
+				BranchTable[entryIndex].targetAddr = buff_stages[0].Addr;
+				BranchTable[entryIndex].branchPC = buff_stages[0].PC;
+				prediction_correct = 0;
 			}
 		}
 	
 	}else{//Prediction is in BTB
-		currentPC = BranchTable[entryIndex].branchPC;
-		if(entry.PC == buff_stages[1].Addr) //Was prediction correct
+		currentPrediction = checkPrediction(prediction_method, BranchTable[entryIndex].prediction);
+		if((currentPrediction == 1 && entry.PC == buff_stages[0].Addr)||(currentPrediction == 0 && entry.PC != buff_stages[0].Addr))//Was prediction correct
 		{
+			BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
+			BranchTable[entryIndex].targetAddr = buff_stages[0].Addr;
+			BranchTable[entryIndex].branchPC = buff_stages[0].PC;
 			prediction_correct = 1;
 		}
 		else	
 		{
-			BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
-			BranchTable[entryIndex].targetAddr= hexToDec(buff_stages[2].Addr);
-			BranchTable[entryIndex].branchPC = (buff_stages[2].PC);
-			//squash
+			BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 0);
+			BranchTable[entryIndex].targetAddr= buff_stages[0].Addr;
+			BranchTable[entryIndex].branchPC = buff_stages[0].PC;
+			prediction_correct = 0;
 		}
 	}
 }
