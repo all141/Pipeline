@@ -4,7 +4,7 @@
    and execute using							
    ./pipeline  /afs/cs.pitt.edu/courses/1541/short_traces/sample.tr	0  
 ***************************************************************/
-
+//TR_ENTRY MIGHT BE GETTING OVERWRITTEN,MAYBE
 #include <stdio.h>
 #include <inttypes.h>
 #include <arpa/inet.h>
@@ -339,37 +339,28 @@ void branch_prediction(struct trace_item entry)
 				//Instruction is a branch
 				if(entry.PC == buff_stages[0].Addr) 
 				{//Is the branch taken
-					printf("Prediction 1: %i\n",BranchTable[entryIndex].prediction);
 					BranchTable[entryIndex].prediction =updatePrediction(BranchTable[entryIndex].prediction, prediction_method, isTaken);
-				    //printf("Updated Prediction 1: %i\n",BranchTable[entryIndex].prediction);
 					BranchTable[entryIndex].targetAddr = buff_stages[0].Addr;
 					BranchTable[entryIndex].branchPC = buff_stages[0].PC;
 					prediction_correct = 0;
 				}
 				else 
 				{
-					printf("Prediction 2: %i\n",BranchTable[entryIndex].prediction);
 					BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, isTaken);
-					//printf("Updated Prediction 2: %i\n",BranchTable[entryIndex].prediction);
 					BranchTable[entryIndex].targetAddr = buff_stages[0].Addr;
 					BranchTable[entryIndex].branchPC = buff_stages[0].PC;
 					prediction_correct = 0;
 				}
 		}else{//Prediction is in BTB
 			currentPrediction = checkPrediction(prediction_method,BranchTable[entryIndex].prediction);
-			//printf("currentPrediction: %i, isTaken: %i\n", currentPrediction, isTaken);
 			if((currentPrediction == 1 && isTaken == 1)||(currentPrediction == 0 && isTaken == 0))//Was prediction correct
 			{
-				printf("Prediction 3: %i\n",BranchTable[entryIndex].prediction);
 				BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, isTaken);
-				//printf("Updated Prediction 3: %i\n",BranchTable[entryIndex].prediction);
 				prediction_correct = 1;
 			}
 			else	
 			{
-				printf("Prediction 4: %i\n",BranchTable[entryIndex].prediction);
 				BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, isTaken);
-				//printf("Updated Prediction 4: %i\n",BranchTable[entryIndex].prediction);
 				prediction_correct = 0;
 			}
 		}
@@ -377,16 +368,12 @@ void branch_prediction(struct trace_item entry)
 	{//Is instruction a jump
 		if((BranchTable[entryIndex].prediction == 0)&&(BranchTable[entryIndex].targetAddr == 0)&&(BranchTable[entryIndex].prediction == 0))
 		{//No prediction available
-			printf("Prediction 1: %i\n",BranchTable[entryIndex].prediction);
 			BranchTable[entryIndex].prediction =updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
-			//printf("Updated Prediction 1: %i\n",BranchTable[entryIndex].prediction);
 			BranchTable[entryIndex].targetAddr = buff_stages[0].Addr;
 			BranchTable[entryIndex].branchPC = buff_stages[0].PC;
 			prediction_correct = 0;
 		}else{//Prediction is in BTB
-				printf("Prediction 3: %i\n",BranchTable[entryIndex].prediction);
 				BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
-				//printf("Updated Prediction 3: %i\n",BranchTable[entryIndex].prediction);
 				prediction_correct = 1;
 		}
 	}else{
@@ -462,7 +449,7 @@ int main(int argc, char **argv)
   
   //Loop until the end of the trace file
   while(1) {
-	if((stall_flag == 0) || (empty_flag != 0) || (squash_flag != 0)){
+	if((stall_flag == 0) || (empty_flag != 0) || (squash_flag == 0)){
 		size = trace_get_item(&tr_entry); //Fetch next instruction
 	}    
 	
