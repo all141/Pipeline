@@ -336,21 +336,11 @@ void branch_prediction(struct trace_item entry)
 	{//Is instruction a branch
 		if((BranchTable[entryIndex].prediction == -1)&&(BranchTable[entryIndex].targetAddr == -1)&&(BranchTable[entryIndex].branchPC == -1))
 		{//No prediction available
-				//Instruction is a branch
-				if(entry.PC == buff_stages[0].Addr) 
-				{//Is the branch taken
-					BranchTable[entryIndex].prediction =updatePrediction(BranchTable[entryIndex].prediction, prediction_method, isTaken);
-					BranchTable[entryIndex].targetAddr = buff_stages[0].Addr;
-					BranchTable[entryIndex].branchPC = buff_stages[0].PC;
-					prediction_correct = 0;
-				}
-				else 
-				{
-					BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, isTaken);
-					BranchTable[entryIndex].targetAddr = buff_stages[0].Addr;
-					BranchTable[entryIndex].branchPC = buff_stages[0].PC;
-					prediction_correct = 0;
-				}
+		//Instruction is a branch
+			BranchTable[entryIndex].prediction =updatePrediction(BranchTable[entryIndex].prediction, prediction_method, isTaken);
+			BranchTable[entryIndex].targetAddr = buff_stages[0].Addr;
+			BranchTable[entryIndex].branchPC = buff_stages[0].PC;
+			prediction_correct = 0;
 		}else{//Prediction is in BTB
 			currentPrediction = checkPrediction(prediction_method,BranchTable[entryIndex].prediction);
 			if((currentPrediction == 1 && isTaken == 1)||(currentPrediction == 0 && isTaken == 0))//Was prediction correct
