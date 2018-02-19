@@ -234,7 +234,7 @@ int checkPrediction(int s, int p)
  * PARAMETERS
  * p: value of the prediction from the table
  * s: prediction style determined by program arguments
- * hitMiss: whther the previous prediction was taken or not
+ * hitMiss: whether the branch is taken
  *
  * RETURN
  * returns: an integer literal based on what the new prediction is
@@ -327,6 +327,11 @@ void branch_prediction(struct trace_item entry)
 	int currentPrediction = 0;
 	int currentPC = buff_stages[0].PC;
 	int entryIndex = getIndex(currentPC); 
+	int isTaken = 0;
+	if(entry.PC == buff_stages[0].Addr)
+	{
+		isTaken = 1;
+	}
 	if(buff_stages[0].type == ti_BRANCH || buff_stages[0].type == ti_JTYPE || buff_stages[0].type == ti_JRTYPE)
 	{//Is instruction a branch
 		if((BranchTable[entryIndex].prediction == 0)&&(BranchTable[entryIndex].targetAddr == 0)&&(BranchTable[entryIndex].prediction == 0))
@@ -335,8 +340,8 @@ void branch_prediction(struct trace_item entry)
 				if(entry.PC == buff_stages[0].Addr) 
 				{//Is the branch taken
 					printf("Prediction 1: %i\n",BranchTable[entryIndex].prediction);
-					BranchTable[entryIndex].prediction =updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
-					printf("Updated Prediction 1: %i\n",BranchTable[entryIndex].prediction);
+					BranchTable[entryIndex].prediction =updatePrediction(BranchTable[entryIndex].prediction, prediction_method, isTaken);
+				    //printf("Updated Prediction 1: %i\n",BranchTable[entryIndex].prediction);
 					BranchTable[entryIndex].targetAddr = buff_stages[0].Addr;
 					BranchTable[entryIndex].branchPC = buff_stages[0].PC;
 					prediction_correct = 0;
@@ -344,27 +349,27 @@ void branch_prediction(struct trace_item entry)
 				else 
 				{
 					printf("Prediction 2: %i\n",BranchTable[entryIndex].prediction);
-					BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 0);
-					printf("Updated Prediction 2: %i\n",BranchTable[entryIndex].prediction);
+					BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, isTaken);
+					//printf("Updated Prediction 2: %i\n",BranchTable[entryIndex].prediction);
 					BranchTable[entryIndex].targetAddr = buff_stages[0].Addr;
 					BranchTable[entryIndex].branchPC = buff_stages[0].PC;
 					prediction_correct = 0;
 				}
 		}else{//Prediction is in BTB
-			currentPrediction = BranchTable[entryIndex].prediction;
-			if((currentPrediction == 1 && entry.PC == buff_stages[0].Addr)||(currentPrediction == 0 && entry.PC != buff_stages[0].Addr))//Was prediction correct
+			currentPrediction = checkPrediction(prediction_method,BranchTable[entryIndex].prediction);
+			//printf("currentPrediction: %i, isTaken: %i\n", currentPrediction, isTaken);
+			if((currentPrediction == 1 && isTaken == 1)||(currentPrediction == 0 && isTaken == 0))//Was prediction correct
 			{
 				printf("Prediction 3: %i\n",BranchTable[entryIndex].prediction);
-				BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
-				printf("Updated Prediction 3: %i\n",BranchTable[entryIndex].prediction);
+				BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, isTaken);
+				//printf("Updated Prediction 3: %i\n",BranchTable[entryIndex].prediction);
 				prediction_correct = 1;
 			}
 			else	
 			{
 				printf("Prediction 4: %i\n",BranchTable[entryIndex].prediction);
-				printf("entry.PC: %x, buff_stages[0].Addr: %x\n", entry.PC, buff_stages[0].Addr);
-				BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 0);
-				printf("Updated Prediction 4: %i\n",BranchTable[entryIndex].prediction);
+				BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, isTaken);
+				//printf("Updated Prediction 4: %i\n",BranchTable[entryIndex].prediction);
 				prediction_correct = 0;
 			}
 		}
