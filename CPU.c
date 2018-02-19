@@ -439,7 +439,7 @@ int main(int argc, char **argv)
   
   //Loop until the end of the trace file
   while(1) {
-	if(((stall_flag == 0) || (empty_flag != 0)) && (squash_flag == 0)){
+	if(((stall_flag == 0) || (empty_flag == 0)) && (squash_flag == 0)){
 		size = trace_get_item(&tr_entry); //Fetch next instruction
 	}    
 	
