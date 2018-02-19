@@ -334,7 +334,7 @@ void branch_prediction(struct trace_item entry)
 	}
 	if(buff_stages[0].type == ti_BRANCH)
 	{//Is instruction a branch
-		if((BranchTable[entryIndex].prediction == -1)&&(BranchTable[entryIndex].targetAddr == -1)&&(BranchTable[entryIndex].branchPC == -1))
+		if((BranchTable[entryIndex].prediction == 0)&&(BranchTable[entryIndex].targetAddr == -1)&&(BranchTable[entryIndex].branchPC == -1))
 		{//No prediction available
 		//Instruction is a branch
 			BranchTable[entryIndex].prediction =updatePrediction(BranchTable[entryIndex].prediction, prediction_method, isTaken);
@@ -363,8 +363,8 @@ void branch_prediction(struct trace_item entry)
 			BranchTable[entryIndex].branchPC = buff_stages[0].PC;
 			prediction_correct = 0;
 		}else{//Prediction is in BTB
-				BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
-				prediction_correct = 1;
+			BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
+			prediction_correct = 1;
 		}
 	}else{
 	}
@@ -383,7 +383,7 @@ void init_branch_table()
 	int i = 0;
 	for(i; i<64;i++)
 	{
-		BranchTable[i].prediction = -1;
+		BranchTable[i].prediction = 0;
 		BranchTable[i].targetAddr= -1;
 		BranchTable[i].branchPC = -1;
 	}
@@ -439,7 +439,7 @@ int main(int argc, char **argv)
   
   //Loop until the end of the trace file
   while(1) {
-	if((stall_flag == 0) || (empty_flag != 0) || (squash_flag == 0)){
+	if(((stall_flag == 0) || (empty_flag != 0)) && (squash_flag == 0)){
 		size = trace_get_item(&tr_entry); //Fetch next instruction
 	}    
 	
