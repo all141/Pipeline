@@ -87,7 +87,7 @@ void check_hazards(struct trace_item entry)
 		}
 		
 	//Structural Hazard
-	}else if(buff_stages[5].type == (ti_RTYPE || ti_ITYPE || ti_LOAD) && (buff_stages[1].type != ti_JTYPE)){
+	}else if(buff_stages[5].type == (ti_RTYPE || ti_ITYPE || ti_LOAD) && (buff_stages[1].type != ti_JTYPE) && (squash_flag == 0)){
 		//printf("STRUCTURAL HAZARD\nPC of buff[5]: (%x), PC of buff[1]: (%x)\n", buff_stages[5].PC, buff_stages[1].PC);
 		stall_flag = 3;
 	
@@ -332,7 +332,7 @@ void branch_prediction(struct trace_item entry)
 	{
 		isTaken = 1;
 	}
-	if(buff_stages[0].type == ti_BRANCH || buff_stages[0].type == ti_JTYPE || buff_stages[0].type == ti_JRTYPE)
+	if(buff_stages[0].type == ti_BRANCH)
 	{//Is instruction a branch
 		if((BranchTable[entryIndex].prediction == 0)&&(BranchTable[entryIndex].targetAddr == 0)&&(BranchTable[entryIndex].prediction == 0))
 		{//No prediction available
@@ -373,6 +373,23 @@ void branch_prediction(struct trace_item entry)
 				prediction_correct = 0;
 			}
 		}
+	}else if(buff_stages[0].type == ti_JTYPE || buff_stages[0].type == ti_JRTYPE)
+	{//Is instruction a jump
+		if((BranchTable[entryIndex].prediction == 0)&&(BranchTable[entryIndex].targetAddr == 0)&&(BranchTable[entryIndex].prediction == 0))
+		{//No prediction available
+			printf("Prediction 1: %i\n",BranchTable[entryIndex].prediction);
+			BranchTable[entryIndex].prediction =updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
+			//printf("Updated Prediction 1: %i\n",BranchTable[entryIndex].prediction);
+			BranchTable[entryIndex].targetAddr = buff_stages[0].Addr;
+			BranchTable[entryIndex].branchPC = buff_stages[0].PC;
+			prediction_correct = 0;
+		}else{//Prediction is in BTB
+				printf("Prediction 3: %i\n",BranchTable[entryIndex].prediction);
+				BranchTable[entryIndex].prediction = updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
+				//printf("Updated Prediction 3: %i\n",BranchTable[entryIndex].prediction);
+				prediction_correct = 1;
+		}
+	}else{
 	}
 }
 
