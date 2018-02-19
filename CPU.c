@@ -334,7 +334,7 @@ void branch_prediction(struct trace_item entry)
 	}
 	if(buff_stages[0].type == ti_BRANCH)
 	{//Is instruction a branch
-		if((BranchTable[entryIndex].prediction == 0)&&(BranchTable[entryIndex].targetAddr == 0)&&(BranchTable[entryIndex].prediction == 0))
+		if((BranchTable[entryIndex].prediction == -1)&&(BranchTable[entryIndex].targetAddr == -1)&&(BranchTable[entryIndex].branchPC == -1))
 		{//No prediction available
 				//Instruction is a branch
 				if(entry.PC == buff_stages[0].Addr) 
@@ -366,7 +366,7 @@ void branch_prediction(struct trace_item entry)
 		}
 	}else if(buff_stages[0].type == ti_JTYPE || buff_stages[0].type == ti_JRTYPE)
 	{//Is instruction a jump
-		if((BranchTable[entryIndex].prediction == 0)&&(BranchTable[entryIndex].targetAddr == 0)&&(BranchTable[entryIndex].prediction == 0))
+		if((BranchTable[entryIndex].prediction == -1)&&(BranchTable[entryIndex].targetAddr == -1)&&(BranchTable[entryIndex].branchPC == -1))
 		{//No prediction available
 			BranchTable[entryIndex].prediction =updatePrediction(BranchTable[entryIndex].prediction, prediction_method, 1);
 			BranchTable[entryIndex].targetAddr = buff_stages[0].Addr;
@@ -393,9 +393,9 @@ void init_branch_table()
 	int i = 0;
 	for(i; i<64;i++)
 	{
-		BranchTable[i].prediction = 0;
-		BranchTable[i].targetAddr= 0;
-		BranchTable[i].branchPC = 0;
+		BranchTable[i].prediction = -1;
+		BranchTable[i].targetAddr= -1;
+		BranchTable[i].branchPC = -1;
 	}
 }
 
