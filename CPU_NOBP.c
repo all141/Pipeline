@@ -8,8 +8,17 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <arpa/inet.h>
+
+#include "cache.h" 
 #include "CPU.h" 
 
+// to keep cache statistics
+unsigned int I_accesses = 0;
+unsigned int I_misses = 0;
+unsigned int D_read_accesses = 0;
+unsigned int D_read_misses = 0;
+unsigned int D_write_accesses = 0; 
+unsigned int D_write_misses = 0;
 
 struct trace_item buff_stages[8];	//Allocation of memory for instructions
 
@@ -171,7 +180,17 @@ int main(int argc, char **argv)
   }
     
   trace_file_name = argv[1];
-  trace_view_on = atoi(argv[2]);
+  if (argc == 3) trace_view_on = atoi(argv[2]) ;
+  // here you should extract the cache parameters from the configuration file 
+  unsigned int I_size = 2 ; 
+  unsigned int I_assoc = 4;
+  unsigned int I_bsize = 16; 
+  unsigned int D_size = 1;
+  unsigned int D_assoc = 4;
+  unsigned int D_bsize = 16;
+  unsigned int miss_penalty = 80;
+  unsigned int latency ;
+
  
 
   fprintf(stdout, "\n ** opening file %s\n", trace_file_name);
@@ -184,6 +203,9 @@ int main(int argc, char **argv)
   }
 
   trace_init();
+  struct cache_t *I_cache, *D_cache;
+  I_cache = cache_create(I_size, I_bsize, I_assoc, miss_penalty); 
+  D_cache = cache_create(D_size, D_bsize, D_assoc, miss_penalty);
   init_pipeline();		//Initialize the pipeline
   
   //Loop until the end of the trace file
@@ -216,6 +238,11 @@ int main(int argc, char **argv)
 	}
 	
     if (trace_view_on) {// print the executed instruction if trace_view_on = 1 
+		//latency = cache_access(I_cache, tr_entry->PC, 0); /* simulate instruction fetch */
+		cycle_number = cycle_number + latency ;
+		I_accesses ++ ;
+        if(latency > 0) I_misses ++ ;
+	
       switch(buff_stages[6].type) {
         case ti_NOP:
 			printf("[cycle %d] NOP:\n",cycle_number);
@@ -263,5 +290,8 @@ int main(int argc, char **argv)
   trace_uninit();
   
   printf("+ Simulation terminates at cycle : %u\n", cycle_number);
+  printf("I-cache accesses %u and misses %u\n", I_accesses, I_misses);
+  printf("D-cache Read accesses %u and misses %u\n", D_read_accesses, D_read_misses);
+  printf("D-cache Write accesses %u and misses %u\n", D_write_accesses, D_write_misses);
   exit(0);
 }
