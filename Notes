@@ -1,0 +1,10 @@
+Find out you have a miss whenever you access the tag in L1.
+Inclusive Property:
+  A block existing both in L1 and L2.
+  There cannot be a block that exists in the L1 and not in the L2.
+  Every block will have a bit in L2 that says whether the data exists in an L1 cache as well.
+  That means if a block is in L1 and L2 it cannot be evicted from L2. 
+  If you must remove a block and all blocks exist in both L1 and L2, evict block from both L1 and L2.
+Coherence:
+  Don't worry about it. The two caches cache completely different things.
+  
