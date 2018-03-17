@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <arpa/inet.h>
+#include "cache.h" 
 #include "CPU.h" 
+
 /*GOALS
 	1. FIX ORIGINAL PIPELINE
 		-All hazards need to detect and handle properly
@@ -21,7 +23,11 @@ unsigned int D_read_misses = 0;
 unsigned int D_write_accesses = 0; 
 unsigned int D_write_misses = 0;
 
-#include "cache.h" 
+struct trace_item buff_stages[8];	//Allocation of memory for instructions
+
+int stall_flag = 0;				 	//Tells push_pipline() to stall
+int squash_flag = 0;
+int latency = 0;
 
 //Functions from project 1
 /***********************************************************/
@@ -55,7 +61,7 @@ void check_hazards(struct trace_item entry)
 	   buff_stages[2].type == ti_JRTYPE){
 		   
 		//PC of new instruction is same as branch/jump target address
-		if((buff_stages[1].PC == buff_stages[2].Addr) && prediction_correct == 0){
+		if((buff_stages[1].PC == buff_stages[2].Addr)){
 			//printf("CONTROL HAZARD\nPC of [1]: (%x), PC of EX/MEM1 : (%x)\n", buff_stages[1].PC, buff_stages[3].Addr);
 			squash_flag = 3;
 		}
@@ -166,7 +172,7 @@ int main(int argc, char **argv)
   fscanf(ptr_file, "%d", &L2_assoc);
   fscanf(ptr_file, "%d", &block_size);
   fscanf(ptr_file, "%d", &L2_accesstime);
-  fscanf(ptr_file, "%d", &mem_acccesstime);
+  fscanf(ptr_file, "%d", &mem_accesstime);
 
   fclose(ptr_file);	//Close cache_config.txt
   /*********************************************/
@@ -182,8 +188,8 @@ int main(int argc, char **argv)
 
   trace_init();
   struct cache_t *I_cache, *D_cache;
-  I_cache = cache_create(I_size, I_bsize, I_assoc, miss_penalty); 
-  D_cache = cache_create(D_size, D_bsize, D_assoc, miss_penalty);
+  I_cache = cache_create(L1_Isize, block_size, L1_Iassoc, mem_accesstime); 
+  D_cache = cache_create(L1_Dsize, block_size, L1_Dassoc, mem_accesstime);
 
   while(1) {
     size = trace_get_item(&tr_entry);
@@ -209,10 +215,10 @@ int main(int argc, char **argv)
 // IN ONE CYCLE, EXCEPT IF THERE IS A CACHE MISS.
 
 	if (trace_view_on) printf("\n");
-	latency = cache_access(I_cache, tr_entry->PC, 0); /* simulate instruction fetch */
-	cycle_number = cycle_number + latency ;
+	//latency = cache_access(I_cache, tr_entry->PC, 0); /* simulate instruction fetch */
+	//cycle_number = cycle_number + latency ;
         I_accesses ++ ;
-        if(latency > 0) I_misses ++ ;
+      //  if(latency > 0) I_misses ++ ;
 
       switch(tr_entry->type) {
         case ti_NOP:

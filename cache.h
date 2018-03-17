@@ -25,10 +25,10 @@ struct cache_t * cache_create(int size, int blocksize, int assoc, int mem_latenc
   int i, nblocks , nsets ;
   struct cache_t *C = (struct cache_t *)calloc(1, sizeof(struct cache_t));
 		
-  nblocks = size *1024 / blocksize ;// number of blocks in the cache
-  nsets = nblocks / assoc ;			// number of sets (entries) in the cache
-  C->blocksize = blocksize ;
-  C->nsets = nsets  ; 
+  nblocks = size *1024 / blocksize;// number of blocks in the cache
+  nsets = nblocks / assoc;			// number of sets (entries) in the cache
+  C->blocksize = blocksize;
+  C->nsets = nsets; 
   C->assoc = assoc;
   C->mem_latency = mem_latency;
 
