@@ -126,6 +126,8 @@ int main(int argc, char **argv)
   FILE *ptr_file;	//File to be read for cache config (cache_config.txt)
   char buf[10];
   int i;
+  int stores = 0;
+  int loads = 0;
   
   unsigned char t_type = 0;
   unsigned char t_sReg_a= 0;
@@ -205,11 +207,24 @@ int main(int argc, char **argv)
       t_PC = tr_entry->PC;
       t_Addr = tr_entry->Addr;
     }  
-
+	if(tr_entry->type == ti_LOAD)
+	{
+		loads++;
+	}else if(tr_entry->type == ti_STORE)
+	{
+		stores++;
+	}
 	push_pipeline(*tr_entry);
 	
 	if (trace_view_on) printf("\n");
+	
 	latency = cache_access(I_cache, tr_entry->PC, 0); /* simulate instruction fetch */
+	I_accesses ++;
+	
+	if(latency > 0)
+	{
+		I_misses++;
+	}
 	if(buff_stages[3].type == ti_LOAD)
 	{
 		latency += cache_access(D_cache, buff_stages[3].Addr, 0);
@@ -221,13 +236,7 @@ int main(int argc, char **argv)
 		D_write_accesses ++ ;
 		if (latency > 0) D_write_misses ++ ;
 	}
-	//latency += cache_access(D_cache, buff_stages[3]->
 	cycle_number = cycle_number + latency ;
-    I_accesses ++ ;
-        if(latency > 0)
-		{
-			I_misses++;
-		}
 
       switch(buff_stages[6].type) 
 	  {
@@ -362,6 +371,8 @@ push_pipeline(fake_instr);
       printf("I-cache accesses %u and misses %u\n", I_accesses, I_misses);
       printf("D-cache Read accesses %u and misses %u\n", D_read_accesses, D_read_misses);
       printf("D-cache Write accesses %u and misses %u\n", D_write_accesses, D_write_misses);
+	  //printf("Loads: %d\n", loads);
+	  //printf("Stores: %d\n", stores);
 
   trace_uninit();
 
