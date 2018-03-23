@@ -28,6 +28,7 @@ int mem_flag = 0;
 int stall_flag = 0;				 	//Tells push_pipline() to stall
 int squash_flag = 0;
 int latency = 0;
+int latency_comp = 0;
 
 //Functions from project 1
 /***********************************************************/
@@ -239,17 +240,53 @@ int main(int argc, char **argv)
 	if(latency > 0)
 	{
 		I_misses++;
+		if(L2_size != 0)
+		{
+			latency_comp = latency;
+			latency += cache_access(L2_cache, tr_entry->PC, 0);
+			L2_read_accesses++;
+			if(latency > latency_comp)
+			{
+				L2_read_misses++;
+			}
+		}
 	}
 	if(buff_stages[3].type == ti_LOAD)
 	{
 		latency += cache_access(D_cache, buff_stages[3].Addr, 0);
-		D_read_accesses ++ ;
-		if (latency > 0) D_read_misses ++ ;
+		D_read_accesses ++;
+		if(latency > 0)
+		{
+			D_read_misses++;
+			if(L2_size != 0)
+			{
+				latency_comp = latency;
+				latency += cache_access(L2_cache, buff_stages[3].Addr, 0);
+				L2_read_accesses++;
+				if(latency > latency_comp)
+				{
+					L2_read_misses++;
+				}
+			}
+		}
 	} else if(buff_stages[3].type == ti_STORE)
 	{
 		latency += cache_access(D_cache, buff_stages[3].Addr, 1);
 		D_write_accesses ++ ;
-		if (latency > 0) D_write_misses ++ ;
+		if(latency > 0)
+		{
+			D_write_misses++;
+			if(L2_size != 0)
+			{
+				latency_comp = latency;
+				latency += cache_access(L2_cache, buff_stages[3].Addr, 1);
+				L2_write_accesses++;
+				if(latency > latency_comp)
+				{
+					L2_write_misses++;
+				}
+			}
+		}
 	}
 	cycle_number = cycle_number + latency ;
 
