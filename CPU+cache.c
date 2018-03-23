@@ -16,6 +16,11 @@ unsigned int D_read_accesses = 0;
 unsigned int D_read_misses = 0;
 unsigned int D_write_accesses = 0; 
 unsigned int D_write_misses = 0;
+unsigned int L2_read_accesses = 0;
+unsigned int L2_read_misses = 0;
+unsigned int L2_write_accesses = 0; 
+unsigned int L2_write_misses = 0;
+
 
 struct trace_item buff_stages[8];	//Allocation of memory for instructions
 
@@ -188,9 +193,19 @@ int main(int argc, char **argv)
   trace_init();
   init_pipeline();		//Initialize the pipeline
   
-  struct cache_t *I_cache, *D_cache;
-  I_cache = cache_create(L1_Isize, block_size, L1_Iassoc, mem_accesstime); 
-  D_cache = cache_create(L1_Dsize, block_size, L1_Dassoc, mem_accesstime);
+  struct cache_t *I_cache, *D_cache, *L2_cache;
+  
+  if(L2_size != 0)
+  {
+	L2_cache = cache_create(L2_size, block_size, L2_assoc, mem_accesstime);
+	I_cache = cache_create(L1_Isize, block_size, L1_Iassoc, L2_accesstime); 
+	D_cache = cache_create(L1_Dsize, block_size, L1_Dassoc, L2_accesstime);
+  } else
+  {
+	  I_cache = cache_create(L1_Isize, block_size, L1_Iassoc, mem_accesstime); 
+	  D_cache = cache_create(L1_Dsize, block_size, L1_Dassoc, mem_accesstime);
+  }
+  
 
   while(1) {
     size = trace_get_item(&tr_entry);
@@ -260,20 +275,12 @@ int main(int argc, char **argv)
 			printf("[cycle %d] LOAD:", cycle_number);
 			printf(" (PC: %x)(sReg_a: %d)(dReg: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].dReg, buff_stages[6].Addr);
 		  };
-		  /**latency = cache_access(D_cache, buff_stages[6].Addr, 0);
-		  cycle_number = cycle_number + latency ;
-		  D_read_accesses ++ ;
-		  if (latency > 0) D_read_misses ++ ;*/
 		  break;
         case ti_STORE:
 		  if (trace_view_on){
 			printf("[cycle %d] STORE:", cycle_number);
 			printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].sReg_b, buff_stages[6].Addr);
 		  };
-		  /**latency = cache_access(D_cache, buff_stages[6].Addr, 1);
-		  cycle_number = cycle_number + latency ;
-		  D_write_accesses ++ ;
-		  if (latency > 0) D_write_misses ++ ;*/
 		  break;
         case ti_BRANCH:
 		  if (trace_view_on) {
@@ -328,20 +335,12 @@ push_pipeline(fake_instr);
 			printf("[cycle %d] LOAD:", cycle_number);
 			printf(" (PC: %x)(sReg_a: %d)(dReg: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].dReg, buff_stages[6].Addr);
 		  };
-		 /** latency = cache_access(D_cache, buff_stages[6].Addr, 0);
-		  cycle_number = cycle_number + latency ;
-		  D_read_accesses ++ ;
-		  if (latency > 0) D_read_misses ++ ;*/
 		  break;
         case ti_STORE:
 		  if (trace_view_on){
 			printf("[cycle %d] STORE:", cycle_number);
 			printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].sReg_b, buff_stages[6].Addr);
 		  };
-		 /** latency = cache_access(D_cache, buff_stages[6].Addr, 1);
-		  cycle_number = cycle_number + latency ;
-		  D_write_accesses ++ ;
-		  if (latency > 0) D_write_misses ++ ;*/
 		  break;
         case ti_BRANCH:
 		  if (trace_view_on) {
@@ -371,6 +370,8 @@ push_pipeline(fake_instr);
       printf("I-cache accesses %u and misses %u\n", I_accesses, I_misses);
       printf("D-cache Read accesses %u and misses %u\n", D_read_accesses, D_read_misses);
       printf("D-cache Write accesses %u and misses %u\n", D_write_accesses, D_write_misses);
+	  printf("L2-cache Read accesses %u and misses %u\n", L2_read_accesses, L2_read_misses);
+      printf("L2-cache Write accesses %u and misses %u\n", L2_write_accesses, L2_write_misses);
 	  //printf("Loads: %d\n", loads);
 	  //printf("Stores: %d\n", stores);
 
