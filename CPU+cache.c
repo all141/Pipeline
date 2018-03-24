@@ -29,6 +29,9 @@ int stall_flag = 0;				 	//Tells push_pipline() to stall
 int squash_flag = 0;
 int latency = 0;
 int latency_comp = 0;
+int Istall_flag = 0;
+struct trace_item fake_instr;	//Global NOP instruction
+fake_instr->type = ti_NOP;
 
 //Functions from project 1
 /***********************************************************/
@@ -79,6 +82,8 @@ void check_hazards(struct trace_item entry)
 	
 }
 
+
+
 void push_pipeline(struct trace_item entry)
 {		
 	
@@ -121,6 +126,89 @@ void push_pipeline(struct trace_item entry)
 		buff_stages[0] = entry;
 	}
 }
+
+void print_pipeline(int trace_view_on, int cycle_number){
+	switch(buff_stages[6].type) 
+	  {
+        case ti_NOP:
+		  if (trace_view_on) printf("[cycle %d] NOP:", cycle_number);
+          break;
+        case ti_RTYPE:
+		  if (trace_view_on) {
+			printf("[cycle %d] RTYPE:", cycle_number);
+			printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(dReg: %d) \n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].sReg_b, buff_stages[6].dReg);
+		  };
+          break;
+        case ti_ITYPE:
+		  if (trace_view_on){
+			printf("[cycle %d] ITYPE:", cycle_number);
+			printf(" (PC: %x)(sReg_a: %d)(dReg: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].dReg, buff_stages[6].Addr);
+		  };
+          break;
+        case ti_LOAD:
+		  if (trace_view_on){
+			printf("[cycle %d] LOAD:", cycle_number);
+			printf(" (PC: %x)(sReg_a: %d)(dReg: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].dReg, buff_stages[6].Addr);
+		  };
+		  break;
+        case ti_STORE:
+		  if (trace_view_on){
+			printf("[cycle %d] STORE:", cycle_number);
+			printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].sReg_b, buff_stages[6].Addr);
+		  };
+		  break;
+        case ti_BRANCH:
+		  if (trace_view_on) {
+			printf("[cycle %d] BRANCH:", cycle_number);
+			printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].sReg_b, buff_stages[6].Addr);
+		  };
+          break;
+        case ti_JTYPE:
+		  if (trace_view_on) {
+			printf("[cycle %d] JTYPE:", cycle_number);
+			printf(" (PC: %x)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].Addr);
+		  };
+          break;
+        case ti_SPECIAL:
+		  if (trace_view_on) printf("[cycle %d] SPECIAL:", cycle_number);
+          break;
+        case ti_JRTYPE:
+		  if (trace_view_on) {
+			printf("[cycle %d] JRTYPE:", cycle_number);
+			printf(" (PC: %x) (sReg_a: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].dReg, buff_stages[6].Addr);
+		  };
+          break;
+      }
+}
+
+/**
+* Return the cycle number after a bunch of stalling.
+*/
+int stall_pipeline(struct trace_item entry, int ilat, int dlat, int cn, int tvo)
+{
+	if(ilat > 0 && dlat > 0)
+	{
+		for(dlat;dlat=0;dlat--)
+		{
+			buff_stages[6] = buff_stages[5];
+			buff_stages[5] = buff_stages[4];
+			buff_stages[4].type = ti_NOP; 
+			print_pipeline(tvo, cn);
+			ilat--;
+			cn++;
+		}
+	}
+	if(ilat > 0 && dlat == 0)
+	{
+		for(ilat;ilat=0;ilat--)
+		{
+			push_pipeline(fake_instr);
+			print_pipeline(tvo, cn);
+			cn++;
+		}
+	}
+	return cn;
+}
 /*****************************************************************/
 
 int main(int argc, char **argv)
@@ -134,6 +222,8 @@ int main(int argc, char **argv)
   int i;
   int stores = 0;
   int loads = 0;
+  int I_latency = 0;
+  int D_latency = 0;
   
   unsigned char t_type = 0;
   unsigned char t_sReg_a= 0;
@@ -207,10 +297,13 @@ int main(int argc, char **argv)
 	  D_cache = cache_create(L1_Dsize, block_size, L1_Dassoc, mem_accesstime);
   }
   
+  
 
   while(1) {
-    size = trace_get_item(&tr_entry);
-   
+	  if(Istall_flag == 0){
+		  size = trace_get_item(&tr_entry);
+	  }
+
     if (!size ) {  /* no more instructions (trace_items) to simulate */
 	  break;
     }
@@ -223,29 +316,29 @@ int main(int argc, char **argv)
       t_PC = tr_entry->PC;
       t_Addr = tr_entry->Addr;
     }  
-	if(tr_entry->type == ti_LOAD)
+	/*if(tr_entry->type == ti_LOAD)
 	{
 		loads++;
 	}else if(tr_entry->type == ti_STORE)
 	{
 		stores++;
-	}
+	}*/
 	push_pipeline(*tr_entry);
 	
 	if (trace_view_on) printf("\n");
 	
-	latency = cache_access(I_cache, tr_entry->PC, 0); /* simulate instruction fetch */
+	I_latency = cache_access(I_cache, tr_entry->PC, 0); /* simulate instruction fetch */
 	I_accesses ++;
 	
-	if(latency > 0)
+	if(I_latency > 0)
 	{
 		I_misses++;
 		if(L2_size != 0)
 		{
-			latency_comp = latency;
-			latency += cache_access(L2_cache, tr_entry->PC, 0);
+			latency_comp = I_latency;
+			I_latency += cache_access(L2_cache, tr_entry->PC, 0);
 			L2_read_accesses++;
-			if(latency > latency_comp)
+			if(I_latency > latency_comp)
 			{
 				L2_read_misses++;
 			}
@@ -253,17 +346,17 @@ int main(int argc, char **argv)
 	}
 	if(buff_stages[3].type == ti_LOAD)
 	{
-		latency += cache_access(D_cache, buff_stages[3].Addr, 0);
+		D_latency += cache_access(D_cache, buff_stages[3].Addr, 0);
 		D_read_accesses ++;
-		if(latency > 0)
+		if(D_latency > 0)
 		{
 			D_read_misses++;
 			if(L2_size != 0)
 			{
-				latency_comp = latency;
-				latency += cache_access(L2_cache, buff_stages[3].Addr, 0);
+				latency_comp = D_latency;
+				D_latency += cache_access(L2_cache, buff_stages[3].Addr, 0);
 				L2_read_accesses++;
-				if(latency > latency_comp)
+				if(D_latency > latency_comp)
 				{
 					L2_read_misses++;
 				}
@@ -271,81 +364,29 @@ int main(int argc, char **argv)
 		}
 	} else if(buff_stages[3].type == ti_STORE)
 	{
-		latency += cache_access(D_cache, buff_stages[3].Addr, 1);
+		D_latency += cache_access(D_cache, buff_stages[3].Addr, 1);
 		D_write_accesses ++ ;
 		if(latency > 0)
 		{
 			D_write_misses++;
 			if(L2_size != 0)
 			{
-				latency_comp = latency;
-				latency += cache_access(L2_cache, buff_stages[3].Addr, 1);
+				latency_comp = D_latency;
+				D_latency += cache_access(L2_cache, buff_stages[3].Addr, 1);
 				L2_write_accesses++;
-				if(latency > latency_comp)
+				if(D_latency > latency_comp)
 				{
 					L2_write_misses++;
 				}
 			}
 		}
 	}
-	cycle_number = cycle_number + latency ;
-
-      switch(buff_stages[6].type) 
-	  {
-        case ti_NOP:
-		  if (trace_view_on) printf("[cycle %d] NOP:", cycle_number);
-          break;
-        case ti_RTYPE:
-		  if (trace_view_on) {
-			printf("[cycle %d] RTYPE:", cycle_number);
-			printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(dReg: %d) \n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].sReg_b, buff_stages[6].dReg);
-		  };
-          break;
-        case ti_ITYPE:
-		  if (trace_view_on){
-			printf("[cycle %d] ITYPE:", cycle_number);
-			printf(" (PC: %x)(sReg_a: %d)(dReg: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].dReg, buff_stages[6].Addr);
-		  };
-          break;
-        case ti_LOAD:
-		  if (trace_view_on){
-			printf("[cycle %d] LOAD:", cycle_number);
-			printf(" (PC: %x)(sReg_a: %d)(dReg: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].dReg, buff_stages[6].Addr);
-		  };
-		  break;
-        case ti_STORE:
-		  if (trace_view_on){
-			printf("[cycle %d] STORE:", cycle_number);
-			printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].sReg_b, buff_stages[6].Addr);
-		  };
-		  break;
-        case ti_BRANCH:
-		  if (trace_view_on) {
-			printf("[cycle %d] BRANCH:", cycle_number);
-			printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].sReg_b, buff_stages[6].Addr);
-		  };
-          break;
-        case ti_JTYPE:
-		  if (trace_view_on) {
-			printf("[cycle %d] JTYPE:", cycle_number);
-			printf(" (PC: %x)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].Addr);
-		  };
-          break;
-        case ti_SPECIAL:
-		  if (trace_view_on) printf("[cycle %d] SPECIAL:", cycle_number);
-          break;
-        case ti_JRTYPE:
-		  if (trace_view_on) {
-			printf("[cycle %d] JRTYPE:", cycle_number);
-			printf(" (PC: %x) (sReg_a: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].dReg, buff_stages[6].Addr);
-		  };
-          break;
-      }
+	//cycle_number = cycle_number + latency ;
+	stall_pipeline(tr_entry, I_latency, D_latency, cycle_number, trace_view_on);
+    print_pipeline(trace_view_on, cycle_number);
    
   }
 int p = 0;
-struct trace_item fake_instr;
-fake_instr.type = ti_NOP;
 push_pipeline(fake_instr);
 	for(p;p<6;p++)
 	{
