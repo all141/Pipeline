@@ -1,7 +1,7 @@
 /**
 * Return the cycle number after a bunch of stalling.
 */
-int stall_pipeline(struct trace_item entry, int ilat, int dlat, int cn)
+int stall_pipeline(struct trace_item entry, int ilat, int dlat, int cn, int tvo)
 {
 	if(ilat > 0 && dlat > 0)
 	{
@@ -10,6 +10,7 @@ int stall_pipeline(struct trace_item entry, int ilat, int dlat, int cn)
 			buff_stages[6] = buff_stages[5];
 			buff_stages[5] = buff_stages[4];
 			buff_stages[4].type = ti_NOP; 
+			print_pipeline(tvo, cn);
 			ilat--;
 			cn++;
 		}
@@ -19,6 +20,7 @@ int stall_pipeline(struct trace_item entry, int ilat, int dlat, int cn)
 		for(ilat;ilat=0;ilat--)
 		{
 			push_pipeline(fake_instr);
+			print_pipeline(tvo, cn);
 			cn++;
 		}
 	}
