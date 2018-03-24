@@ -182,7 +182,7 @@ void print_pipeline(int trace_view_on, int cycle_number){
 /**
 * Return the cycle number after a bunch of stalling.
 */
-int stall_pipeline(struct trace_item entry, int ilat, int dlat, int cn, int tvo, struct trace_item fi)
+int stall_pipeline(struct trace_item entry, int ilat, int dlat, int cn, int tvo)
 {
 	if(ilat > 0 && dlat > 0)
 	{
@@ -200,7 +200,7 @@ int stall_pipeline(struct trace_item entry, int ilat, int dlat, int cn, int tvo,
 	{
 		for(ilat;ilat=0;ilat--)
 		{
-			push_pipeline(fi);
+			push_pipeline(buff_stages[8]);
 			print_pipeline(tvo, cn);
 			cn++;
 		}
@@ -211,8 +211,6 @@ int stall_pipeline(struct trace_item entry, int ilat, int dlat, int cn, int tvo,
 
 int main(int argc, char **argv)
 {
-  struct trace_item *fake_instr;	//Global NOP instruction
-  fake_instr->type = ti_NOP;
   struct trace_item *tr_entry;
   size_t size;
   char *trace_file_name;
@@ -382,12 +380,12 @@ int main(int argc, char **argv)
 		}
 	}
 	//cycle_number = cycle_number + latency ;
-	stall_pipeline(*tr_entry, I_latency, D_latency, cycle_number, trace_view_on, *fake_instr);
+	stall_pipeline(*tr_entry, I_latency, D_latency, cycle_number, trace_view_on);
     print_pipeline(trace_view_on, cycle_number);
    
   }
 int p = 0;
-push_pipeline(*fake_instr);
+push_pipeline(buff_stages[8]);
 	for(p;p<6;p++)
 	{
 		cycle_number++;
@@ -442,7 +440,7 @@ push_pipeline(*fake_instr);
 		  };
           break; 
       }
-	  push_pipeline(*fake_instr);
+	  push_pipeline(buff_stages[8]);
 	}
 	printf("+ Simulation terminates at cycle : %u\n", cycle_number);
       printf("I-cache accesses %u and misses %u\n", I_accesses, I_misses);
