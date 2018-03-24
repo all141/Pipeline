@@ -30,7 +30,7 @@ int squash_flag = 0;
 int latency = 0;
 int latency_comp = 0;
 int Istall_flag = 0;
-struct trace_item fake_instr;	//Global NOP instruction
+struct trace_item *fake_instr;	//Global NOP instruction
 fake_instr->type = ti_NOP;
 
 //Functions from project 1
@@ -202,7 +202,7 @@ int stall_pipeline(struct trace_item entry, int ilat, int dlat, int cn, int tvo)
 	{
 		for(ilat;ilat=0;ilat--)
 		{
-			push_pipeline(fake_instr);
+			push_pipeline(*fake_instr);
 			print_pipeline(tvo, cn);
 			cn++;
 		}
@@ -382,12 +382,12 @@ int main(int argc, char **argv)
 		}
 	}
 	//cycle_number = cycle_number + latency ;
-	stall_pipeline(tr_entry, I_latency, D_latency, cycle_number, trace_view_on);
+	stall_pipeline(*tr_entry, I_latency, D_latency, cycle_number, trace_view_on);
     print_pipeline(trace_view_on, cycle_number);
    
   }
 int p = 0;
-push_pipeline(fake_instr);
+push_pipeline(*fake_instr);
 	for(p;p<6;p++)
 	{
 		cycle_number++;
@@ -440,9 +440,9 @@ push_pipeline(fake_instr);
 			printf("[cycle %d] JRTYPE:", cycle_number);
 			printf(" (PC: %x) (sReg_a: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].dReg, buff_stages[6].Addr);
 		  };
-          break;
+          break; 
       }
-	  push_pipeline(fake_instr);
+	  push_pipeline(*fake_instr);
 	}
 	printf("+ Simulation terminates at cycle : %u\n", cycle_number);
       printf("I-cache accesses %u and misses %u\n", I_accesses, I_misses);
