@@ -14,21 +14,11 @@ int stall_pipeline(struct trace_item entry, int ilat, int dlat, int cn)
 			cn++;
 		}
 	}
-	if(ilat == 0 && dlat > 0)
-	{
-		for(dlat;dlat=0;dlat--)
-		{
-			buff_stages[6] = buff_stages[5];
-			buff_stages[5] = buff_stages[4];
-			buff_stages[4].type = ti_NOP; 
-			cn++;
-		}
-	}
 	if(ilat > 0 && dlat == 0)
 	{
 		for(ilat;ilat=0;ilat--)
 		{
-			push_pipeline(entry);
+			push_pipeline(fake_instr);
 			cn++;
 		}
 	}
