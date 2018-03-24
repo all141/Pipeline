@@ -3,7 +3,7 @@
 */
 int stall_pipeline(struct trace_item entry, int ilat, int dlat, int cn)
 {
-	if(ilat > 0 && dlat > 0 && ilat > dlat)
+	if(ilat > 0 && dlat > 0)
 	{
 		for(dlat;dlat=0;dlat--)
 		{
