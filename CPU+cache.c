@@ -30,8 +30,6 @@ int squash_flag = 0;
 int latency = 0;
 int latency_comp = 0;
 int Istall_flag = 0;
-struct trace_item *fake_instr;	//Global NOP instruction
-fake_instr->type = ti_NOP;
 
 //Functions from project 1
 /***********************************************************/
@@ -184,7 +182,7 @@ void print_pipeline(int trace_view_on, int cycle_number){
 /**
 * Return the cycle number after a bunch of stalling.
 */
-int stall_pipeline(struct trace_item entry, int ilat, int dlat, int cn, int tvo)
+int stall_pipeline(struct trace_item entry, int ilat, int dlat, int cn, int tvo, struct trace_item fi)
 {
 	if(ilat > 0 && dlat > 0)
 	{
@@ -202,7 +200,7 @@ int stall_pipeline(struct trace_item entry, int ilat, int dlat, int cn, int tvo)
 	{
 		for(ilat;ilat=0;ilat--)
 		{
-			push_pipeline(*fake_instr);
+			push_pipeline(fi);
 			print_pipeline(tvo, cn);
 			cn++;
 		}
@@ -213,6 +211,8 @@ int stall_pipeline(struct trace_item entry, int ilat, int dlat, int cn, int tvo)
 
 int main(int argc, char **argv)
 {
+  struct trace_item *fake_instr;	//Global NOP instruction
+  fake_instr->type = ti_NOP;
   struct trace_item *tr_entry;
   size_t size;
   char *trace_file_name;
@@ -382,7 +382,7 @@ int main(int argc, char **argv)
 		}
 	}
 	//cycle_number = cycle_number + latency ;
-	stall_pipeline(*tr_entry, I_latency, D_latency, cycle_number, trace_view_on);
+	stall_pipeline(*tr_entry, I_latency, D_latency, cycle_number, trace_view_on, *fake_instr);
     print_pipeline(trace_view_on, cycle_number);
    
   }
