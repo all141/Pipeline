@@ -29,7 +29,7 @@ int stall_flag = 0;				 	//Tells push_pipline() to stall
 int squash_flag = 0;
 int latency = 0;
 int latency_comp = 0;
-int Istall_flag = 0;
+
 
 //Functions from project 1
 /***********************************************************/
@@ -80,41 +80,7 @@ void check_hazards(struct trace_item entry)
 	
 }
 
-void check_config(unsigned int a, unsigned int b, unsigned int c, unsigned int d, unsigned int e, unsigned int f, unsigned int g){
-	int stop_program_flag = 0;
-	if((a%2!=0)&&(a!=0)&&(a!=1)){
-		printf("Size of L1 instruction cache is not power of 2\n");
-		stop_program_flag = 1;
-	}
-	if((b%2!=0)&&(b!=0)&&(b!=1)){
-		printf("Associativity of L1 instruction cache is not power of 2\n");
-		stop_program_flag = 1;
-	}
-	if((c%2!=0)&&(c!=0)&&(c!=1)){
-		printf("Size of the L1 data cache is not power of 2\n");
-		stop_program_flag = 1;
-	}
-	if((d%2!=0)&&(c!=0)&&(d!=1)){
-		printf("Associativity of L1 data cache is not power of 2\n");
-		stop_program_flag = 1;
-	}
-	if((e%2!=0)&&(e!=0)&&(e!=1)){
-		printf("Size of the L2 cache is not power of 2\n");
-		stop_program_flag = 1;
-	}
-	if((f%2!=0)&&(f!=0)&&(f!=1)){
-		printf("Associativity of the L2 cache is not power of 2\n");
-		stop_program_flag = 1;
-	}
-	if((g%2!=0)&&(g!=0)&&(g!=1)){
-		printf("The cache block size is not a power of 2\n");
-		stop_program_flag = 1;
-	}
-	
-	if(stop_program_flag==1){
-		exit(0);
-	}
-}
+
 
 void push_pipeline(struct trace_item entry)
 {		
@@ -158,6 +124,42 @@ void push_pipeline(struct trace_item entry)
 		buff_stages[0] = entry;
 	}
 }
+
+void check_config(unsigned int a, unsigned int b, unsigned int c, unsigned int d, unsigned int e, unsigned int f, unsigned int g){
+	int stop_program_flag = 0;
+	if((a%2!=0)&&(a!=0)&&(a!=1)){
+		printf("Size of L1 instruction cache is not power of 2\n");
+		stop_program_flag = 1;
+	}
+	if((b%2!=0)&&(b!=0)&&(b!=1)){
+		printf("Associativity of L1 instruction cache is not power of 2\n");
+		stop_program_flag = 1;
+	}
+	if((c%2!=0)&&(c!=0)&&(c!=1)){
+		printf("Size of the L1 data cache is not power of 2\n");
+		stop_program_flag = 1;
+	}
+	if((d%2!=0)&&(c!=0)&&(d!=1)){
+		printf("Associativity of L1 data cache is not power of 2\n");
+		stop_program_flag = 1;
+	}
+	if((e%2!=0)&&(e!=0)&&(e!=1)){
+		printf("Size of the L2 cache is not power of 2\n");
+		stop_program_flag = 1;
+	}
+	if((f%2!=0)&&(f!=0)&&(f!=1)){
+		printf("Associativity of the L2 cache is not power of 2\n");
+		stop_program_flag = 1;
+	}
+	if((g%2!=0)&&(g!=0)&&(g!=1)){
+		printf("The cache block size is not a power of 2\n");
+		stop_program_flag = 1;
+	}
+	
+	if(stop_program_flag==1){
+		exit(0);
+	}
+}
 /*****************************************************************/
 
 int main(int argc, char **argv)
@@ -167,10 +169,11 @@ int main(int argc, char **argv)
   char *trace_file_name;
   int trace_view_on = 0;
   FILE *ptr_file;	//File to be read for cache config (cache_config.txt)
-  char buf[10];
   int i;
   int stores = 0;
   int loads = 0;
+  int I_latency = 0;
+  int D_latency = 0;
   
   unsigned char t_type = 0;
   unsigned char t_sReg_a= 0;
@@ -219,7 +222,6 @@ int main(int argc, char **argv)
   fclose(ptr_file);	//Close cache_config.txt
   
   check_config(L1_Isize, L1_Iassoc, L1_Dsize, L1_Dassoc, L2_size, L2_assoc, block_size);
-  
   /*********************************************/
   
   fprintf(stdout, "\n ** opening file %s\n", trace_file_name);
@@ -236,22 +238,21 @@ int main(int argc, char **argv)
   
   struct cache_t *I_cache, *D_cache, *L2_cache;
   
-  if(L2_size != 0)
+  if(L2_size != 0) //If an L2 cache is requested to exist, make it
   {
-	L2_cache = cache_create(L2_size, block_size, L2_assoc, mem_accesstime);
-	I_cache = cache_create(L1_Isize, block_size, L1_Iassoc, L2_accesstime); 
+	L2_cache = cache_create(L2_size, block_size, L2_assoc, mem_accesstime);	//Miss penalty for L2 is mem access time
+	I_cache = cache_create(L1_Isize, block_size, L1_Iassoc, L2_accesstime); //Miss penalty for L1 is L2 access time
 	D_cache = cache_create(L1_Dsize, block_size, L1_Dassoc, L2_accesstime);
-  } else
+  } else	//Else, just make the two L1 caches
   {
-	  I_cache = cache_create(L1_Isize, block_size, L1_Iassoc, mem_accesstime); 
+	  I_cache = cache_create(L1_Isize, block_size, L1_Iassoc, mem_accesstime); //Miss penalty for L1 is mem access time
 	  D_cache = cache_create(L1_Dsize, block_size, L1_Dassoc, mem_accesstime);
   }
   
 
   while(1) {
-	  if(Istall_flag == 0){
-		  size = trace_get_item(&tr_entry);
-	  }
+	 
+	size = trace_get_item(&tr_entry);	//Fetch next instruction
 
     if (!size ) {  /* no more instructions (trace_items) to simulate */
 	  break;
@@ -265,75 +266,71 @@ int main(int argc, char **argv)
       t_PC = tr_entry->PC;
       t_Addr = tr_entry->Addr;
     }  
-	/*if(tr_entry->type == ti_LOAD)
-	{
-		loads++;
-	}else if(tr_entry->type == ti_STORE)
-	{
-		stores++;
-	}*/
-	push_pipeline(*tr_entry);
 	
 	if (trace_view_on) printf("\n");
 	
-	latency = cache_access(I_cache, tr_entry->PC, 0); /* simulate instruction fetch */
+	I_latency = cache_access(I_cache, tr_entry->PC, 0); /* simulate instruction fetch */
 	I_accesses ++;
 	
-	if(latency > 0)
+	if(I_latency > 0)//If L1_I_cache miss, check L2
 	{
 		I_misses++;
-		if(L2_size != 0)
+		if(L2_size != 0)//If L2 exists
 		{
-			latency_comp = latency;
-			latency += cache_access(L2_cache, tr_entry->PC, 0);
+			latency_comp = I_latency;	//Save I_latency before accessing L2
+			I_latency += cache_access(L2_cache, tr_entry->PC, 0);	//Access L2 cache
 			L2_read_accesses++;
-			if(latency > latency_comp)
+			if(I_latency > latency_comp) //I_latency increased, then we missed the L2 caache also
 			{
 				L2_read_misses++;
 			}
 		}
-		for(i = 0; i < latency; i++){
-			
-		}
 	}
-	if(buff_stages[3].type == ti_LOAD)
+	if(buff_stages[3].type == ti_LOAD)//If we need to access L1_D_cache 
 	{
-		latency += cache_access(D_cache, buff_stages[3].Addr, 0);
+		D_latency += cache_access(D_cache, buff_stages[3].Addr, 0); //Access L1_D_cache
 		D_read_accesses ++;
-		if(latency > 0)
+		if(D_latency > 0)//If L1_D_cache miss, check L2
 		{
 			D_read_misses++;
-			if(L2_size != 0)
+			if(L2_size != 0)//If L2 exists
 			{
-				latency_comp = latency;
-				latency += cache_access(L2_cache, buff_stages[3].Addr, 0);
+				latency_comp = D_latency;//Save D_latency before accessing L2
+				D_latency += cache_access(L2_cache, buff_stages[3].Addr, 0);
 				L2_read_accesses++;
-				if(latency > latency_comp)
+				if(D_latency > latency_comp)
 				{
 					L2_read_misses++;
 				}
 			}
 		}
-	} else if(buff_stages[3].type == ti_STORE)
+	} else if(buff_stages[3].type == ti_STORE)//If we need to access L1_D_cache 
 	{
-		latency += cache_access(D_cache, buff_stages[3].Addr, 1);
+		D_latency += cache_access(D_cache, buff_stages[3].Addr, 1);//Access L1_D_cache
 		D_write_accesses ++ ;
-		if(latency > 0)
+		if(D_latency > 0)
 		{
 			D_write_misses++;
 			if(L2_size != 0)
 			{
-				latency_comp = latency;
-				latency += cache_access(L2_cache, buff_stages[3].Addr, 1);
+				latency_comp = D_latency;//Save D_latency before accessing L2
+				D_latency += cache_access(L2_cache, buff_stages[3].Addr, 1);
 				L2_write_accesses++;
-				if(latency > latency_comp)
+				if(D_latency > latency_comp)
 				{
 					L2_write_misses++;
 				}
 			}
 		}
 	}
-	cycle_number = cycle_number + latency ;
+	if(I_latency > D_latency){
+		cycle_number += I_latency;
+	}else if(D_latency > I_latency){
+		cycle_number += D_latency;
+	}
+	push_pipeline(*tr_entry);
+	I_latency = 0;
+    D_latency = 0;
 
       switch(buff_stages[6].type) 
 	  {
@@ -394,6 +391,7 @@ fake_instr.type = ti_NOP;
 push_pipeline(fake_instr);
 	for(p;p<6;p++)
 	{
+		if (trace_view_on) printf("\n");
 		cycle_number++;
 	switch(buff_stages[6].type) 
 	  {
