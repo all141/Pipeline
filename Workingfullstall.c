@@ -80,7 +80,41 @@ void check_hazards(struct trace_item entry)
 	
 }
 
-
+void check_config(unsigned int a, unsigned int b, unsigned int c, unsigned int d, unsigned int e, unsigned int f, unsigned int g){
+	int stop_program_flag = 0;
+	if((a%2!=0)&&(a!=0)&&(a!=1)){
+		printf("Size of L1 instruction cache is not power of 2\n");
+		stop_program_flag = 1;
+	}
+	if((b%2!=0)&&(b!=0)&&(b!=1)){
+		printf("Associativity of L1 instruction cache is not power of 2\n");
+		stop_program_flag = 1;
+	}
+	if((c%2!=0)&&(c!=0)&&(c!=1)){
+		printf("Size of the L1 data cache is not power of 2\n");
+		stop_program_flag = 1;
+	}
+	if((d%2!=0)&&(c!=0)&&(d!=1)){
+		printf("Associativity of L1 data cache is not power of 2\n");
+		stop_program_flag = 1;
+	}
+	if((e%2!=0)&&(e!=0)&&(e!=1)){
+		printf("Size of the L2 cache is not power of 2\n");
+		stop_program_flag = 1;
+	}
+	if((f%2!=0)&&(f!=0)&&(f!=1)){
+		printf("Associativity of the L2 cache is not power of 2\n");
+		stop_program_flag = 1;
+	}
+	if((g%2!=0)&&(g!=0)&&(g!=1)){
+		printf("The cache block size is not a power of 2\n");
+		stop_program_flag = 1;
+	}
+	
+	if(stop_program_flag==1){
+		exit(0);
+	}
+}
 
 void push_pipeline(struct trace_item entry)
 {		
@@ -183,6 +217,9 @@ int main(int argc, char **argv)
   fscanf(ptr_file, "%d", &mem_accesstime);
 
   fclose(ptr_file);	//Close cache_config.txt
+  
+  check_config(L1_Isize, L1_Iassoc, L1_Dsize, L1_Dassoc, L2_size, L2_assoc, block_size);
+  
   /*********************************************/
   
   fprintf(stdout, "\n ** opening file %s\n", trace_file_name);
