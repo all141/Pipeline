@@ -169,7 +169,7 @@ void print_pipeline(int trace_view_on){
 		  };
           break;
         case ti_SPECIAL:
-		  if (trace_view_on) printf("[cycle %d] SPECIAL:", cycle_number);
+		  if (trace_view_on) printf("[cycle %d] SPECIAL:\n", cycle_number);
           break;
         case ti_JRTYPE:
 		  if (trace_view_on) {
@@ -217,7 +217,7 @@ void stall_pipeline(struct trace_item entry, int i_lat, int d_lat, int tvo)
 		do
 		{
 			printf("In for loop 3\n");
-			push_pipeline(buff_stages[8]);
+			push_pipeline(buff_stages[7]);
 			print_pipeline(tvo);
 			ilat--;
 			cycle_number++;
@@ -398,21 +398,22 @@ int main(int argc, char **argv)
 		}
 	}
 	//cycle_number = cycle_number + latency ;
-	push_pipeline(*tr_entry);
+	
 	stall_pipeline(*tr_entry, I_latency, D_latency, trace_view_on);
+	push_pipeline(*tr_entry);
     print_pipeline(trace_view_on);
     I_latency = 0;
     D_latency = 0;
   }
 int p = 0;
-push_pipeline(buff_stages[8]);
+push_pipeline(buff_stages[7]);
 	for(p;p<6;p++)
 	{
 		cycle_number++;
 	switch(buff_stages[6].type) 
 	  {
         case ti_NOP:
-		  if (trace_view_on) printf("[cycle %d] NOP:", cycle_number);
+		  if (trace_view_on) printf("[cycle %d] NOP:\n", cycle_number);
           break;
         case ti_RTYPE:
 		  if (trace_view_on) {
@@ -451,7 +452,7 @@ push_pipeline(buff_stages[8]);
 		  };
           break;
         case ti_SPECIAL:
-		  if (trace_view_on) printf("[cycle %d] SPECIAL:", cycle_number);
+		  if (trace_view_on) printf("[cycle %d] SPECIAL:\n", cycle_number);
           break;
         case ti_JRTYPE:
 		  if (trace_view_on) {
@@ -460,7 +461,7 @@ push_pipeline(buff_stages[8]);
 		  };
           break; 
       }
-	  push_pipeline(buff_stages[8]);
+	  push_pipeline(buff_stages[7]);
 	}
 	printf("+ Simulation terminates at cycle : %u\n", cycle_number);
       printf("I-cache accesses %u and misses %u\n", I_accesses, I_misses);
