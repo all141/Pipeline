@@ -20,6 +20,7 @@ unsigned int L2_read_accesses = 0;
 unsigned int L2_read_misses = 0;
 unsigned int L2_write_accesses = 0; 
 unsigned int L2_write_misses = 0;
+unsigned int cycle_number = 0;
 
 
 struct trace_item buff_stages[8];	//Allocation of memory for instructions
@@ -125,7 +126,7 @@ void push_pipeline(struct trace_item entry)
 	}
 }
 
-void print_pipeline(int trace_view_on, int cycle_number){
+void print_pipeline(int trace_view_on){
 	switch(buff_stages[6].type) 
 	  {
         case ti_NOP:
@@ -182,30 +183,50 @@ void print_pipeline(int trace_view_on, int cycle_number){
 /**
 * Return the cycle number after a bunch of stalling.
 */
-int stall_pipeline(struct trace_item entry, int ilat, int dlat, int cn, int tvo)
+void stall_pipeline(struct trace_item entry, int i_lat, int d_lat, int tvo)
 {
+	int ilat = i_lat;
+	int dlat = d_lat;
+	printf("ilat: %d\n", ilat);
+	printf("dlat: %d\n", dlat);
 	if(ilat > 0 && dlat > 0)
 	{
+		printf("ilat > 0, dlat > 0\n");
 		for(dlat;dlat=0;dlat--)
 		{
 			buff_stages[6] = buff_stages[5];
 			buff_stages[5] = buff_stages[4];
 			buff_stages[4].type = ti_NOP; 
-			print_pipeline(tvo, cn);
+			print_pipeline(tvo);
 			ilat--;
-			cn++;
+			printf("cycle_number: %d\n", cycle_number);
+			cycle_number++;
+		}
+	}
+	if(ilat = 0 && dlat > 0)
+	{
+		printf("ilat = 0, dlat > 0\n");
+		for(dlat;dlat=0;dlat--)
+		{
+			buff_stages[6] = buff_stages[5];
+			buff_stages[5] = buff_stages[4];
+			buff_stages[4].type = ti_NOP; 
+			print_pipeline(tvo);
+			printf("cycle_number: %d\n", cycle_number);
+			cycle_number++;
 		}
 	}
 	if(ilat > 0 && dlat == 0)
 	{
+		printf("ilat > 0, dlat = 0\n");
 		for(ilat;ilat=0;ilat--)
 		{
 			push_pipeline(buff_stages[8]);
-			print_pipeline(tvo, cn);
-			cn++;
+			print_pipeline(tvo);
+			printf("cycle_number: %d\n", cycle_number);
+			cycle_number++;
 		}
 	}
-	return cn;
 }
 /*****************************************************************/
 
@@ -230,7 +251,7 @@ int main(int argc, char **argv)
   unsigned int t_PC = 0;
   unsigned int t_Addr = 0;
 
-  unsigned int cycle_number = 0;
+  //unsigned int cycle_number = 0;
 
  if (argc == 1) {
     fprintf(stdout, "\nUSAGE: tv <trace_file> <switch - any character>\n");
@@ -297,7 +318,8 @@ int main(int argc, char **argv)
   
   
 
-  while(1) {
+  while(1) 
+  {
 	  if(Istall_flag == 0){
 		  size = trace_get_item(&tr_entry);
 	  }
@@ -364,7 +386,7 @@ int main(int argc, char **argv)
 	{
 		D_latency += cache_access(D_cache, buff_stages[3].Addr, 1);
 		D_write_accesses ++ ;
-		if(latency > 0)
+		if(D_latency > 0)
 		{
 			D_write_misses++;
 			if(L2_size != 0)
@@ -380,9 +402,10 @@ int main(int argc, char **argv)
 		}
 	}
 	//cycle_number = cycle_number + latency ;
-	stall_pipeline(*tr_entry, I_latency, D_latency, cycle_number, trace_view_on);
-    print_pipeline(trace_view_on, cycle_number);
-   
+	stall_pipeline(*tr_entry, I_latency, D_latency, trace_view_on);
+    print_pipeline(trace_view_on);
+    I_latency = 0;
+    D_latency = 0;
   }
 int p = 0;
 push_pipeline(buff_stages[8]);
