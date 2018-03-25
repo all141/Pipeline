@@ -130,7 +130,7 @@ void print_pipeline(int trace_view_on){
 	switch(buff_stages[6].type) 
 	  {
         case ti_NOP:
-		  if (trace_view_on) printf("[cycle %d] NOP:", cycle_number);
+		  if (trace_view_on) printf("[cycle %d] NOP:\n", cycle_number);
           break;
         case ti_RTYPE:
 		  if (trace_view_on) {
@@ -187,45 +187,41 @@ void stall_pipeline(struct trace_item entry, int i_lat, int d_lat, int tvo)
 {
 	int ilat = i_lat;
 	int dlat = d_lat;
-	printf("ilat: %d\n", ilat);
-	printf("dlat: %d\n", dlat);
 	if(ilat > 0 && dlat > 0)
 	{
-		printf("ilat > 0, dlat > 0\n");
-		for(dlat;dlat=0;dlat--)
+		do
 		{
 			buff_stages[6] = buff_stages[5];
 			buff_stages[5] = buff_stages[4];
 			buff_stages[4].type = ti_NOP; 
 			print_pipeline(tvo);
 			ilat--;
-			printf("cycle_number: %d\n", cycle_number);
+			dlat--;
 			cycle_number++;
-		}
+		}while(dlat > 0);
 	}
-	if(ilat = 0 && dlat > 0)
+	if(ilat <= 0 && dlat > 0)
 	{
-		printf("ilat = 0, dlat > 0\n");
-		for(dlat;dlat=0;dlat--)
+		do
 		{
 			buff_stages[6] = buff_stages[5];
 			buff_stages[5] = buff_stages[4];
 			buff_stages[4].type = ti_NOP; 
 			print_pipeline(tvo);
-			printf("cycle_number: %d\n", cycle_number);
+			dlat--;
 			cycle_number++;
-		}
+		}while(dlat > 0);
 	}
-	if(ilat > 0 && dlat == 0)
+	if(ilat > 0 && dlat <= 0)
 	{
-		printf("ilat > 0, dlat = 0\n");
-		for(ilat;ilat=0;ilat--)
+		do
 		{
+			printf("In for loop 3\n");
 			push_pipeline(buff_stages[8]);
 			print_pipeline(tvo);
-			printf("cycle_number: %d\n", cycle_number);
+			ilat--;
 			cycle_number++;
-		}
+		}while(ilat > 0);
 	}
 }
 /*****************************************************************/
