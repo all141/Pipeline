@@ -353,13 +353,17 @@ int main(int argc, char **argv)
 		  if (trace_view_on){
 			printf("[cycle %d] LOAD:", cycle_number);
 			printf(" (PC: %x)(sReg_a: %d)(dReg: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].dReg, buff_stages[6].Addr);
+			
 		  };
+		  loads++;
 		  break;
         case ti_STORE:
 		  if (trace_view_on){
 			printf("[cycle %d] STORE:", cycle_number);
 			printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].sReg_b, buff_stages[6].Addr);
+			
 		  };
+		  stores++;
 		  break;
         case ti_BRANCH:
 		  if (trace_view_on) {
@@ -386,9 +390,7 @@ int main(int argc, char **argv)
    
   }
 int p = 0;
-struct trace_item fake_instr;
-fake_instr.type = ti_NOP;
-push_pipeline(fake_instr);
+push_pipeline(buff_stages[7]);
 	for(p;p<6;p++)
 	{
 		if (trace_view_on) printf("\n");
@@ -414,13 +416,17 @@ push_pipeline(fake_instr);
 		  if (trace_view_on){
 			printf("[cycle %d] LOAD:", cycle_number);
 			printf(" (PC: %x)(sReg_a: %d)(dReg: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].dReg, buff_stages[6].Addr);
+			
 		  };
+		  loads++;
 		  break;
         case ti_STORE:
 		  if (trace_view_on){
 			printf("[cycle %d] STORE:", cycle_number);
 			printf(" (PC: %x)(sReg_a: %d)(sReg_b: %d)(addr: %x)\n", buff_stages[6].PC, buff_stages[6].sReg_a, buff_stages[6].sReg_b, buff_stages[6].Addr);
+			
 		  };
+		  stores++;
 		  break;
         case ti_BRANCH:
 		  if (trace_view_on) {
@@ -444,7 +450,7 @@ push_pipeline(fake_instr);
 		  };
           break;
       }
-	  push_pipeline(fake_instr);
+	  push_pipeline(buff_stages[7]);
 	}
 	printf("+ Simulation terminates at cycle : %u\n", cycle_number);
       printf("I-cache accesses %u and misses %u\n", I_accesses, I_misses);
@@ -452,8 +458,8 @@ push_pipeline(fake_instr);
       printf("D-cache Write accesses %u and misses %u\n", D_write_accesses, D_write_misses);
 	  printf("L2-cache Read accesses %u and misses %u\n", L2_read_accesses, L2_read_misses);
       printf("L2-cache Write accesses %u and misses %u\n", L2_write_accesses, L2_write_misses);
-	  //printf("Loads: %d\n", loads);
-	  //printf("Stores: %d\n", stores);
+	  printf("Loads: %d\n", loads);
+	  printf("Stores: %d\n", stores);
 
   trace_uninit();
 
