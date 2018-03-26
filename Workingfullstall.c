@@ -19,7 +19,10 @@ unsigned int D_write_misses = 0;
 unsigned int L2_read_accesses = 0;
 unsigned int L2_read_misses = 0;
 unsigned int L2_write_accesses = 0; 
-unsigned int L2_write_misses = 0;
+unsigned int L2_write_misses= 0;
+float L1_D_mr = 0;
+float L1_I_mr = 0;
+float L2_mr = 0;
 
 
 struct trace_item buff_stages[8];	//Allocation of memory for instructions
@@ -174,6 +177,7 @@ int main(int argc, char **argv)
   int loads = 0;
   int I_latency = 0;
   int D_latency = 0;
+  
   
   unsigned char t_type = 0;
   unsigned char t_sReg_a= 0;
@@ -453,13 +457,21 @@ push_pipeline(buff_stages[7]);
 	  push_pipeline(buff_stages[7]);
 	}
 	printf("+ Simulation terminates at cycle : %u\n", cycle_number);
-      printf("I-cache accesses %u and misses %u\n", I_accesses, I_misses);
-      printf("D-cache Read accesses %u and misses %u\n", D_read_accesses, D_read_misses);
-      printf("D-cache Write accesses %u and misses %u\n", D_write_accesses, D_write_misses);
-	  printf("L2-cache Read accesses %u and misses %u\n", L2_read_accesses, L2_read_misses);
-      printf("L2-cache Write accesses %u and misses %u\n", L2_write_accesses, L2_write_misses);
-	  printf("Loads: %d\n", loads);
-	  printf("Stores: %d\n", stores);
+    printf("I-cache accesses %u and misses %u\n", I_accesses, I_misses);
+    printf("D-cache Read accesses %u and misses %u\n", D_read_accesses, D_read_misses);
+    printf("D-cache Write accesses %u and misses %u\n", D_write_accesses, D_write_misses);
+	printf("L2-cache Read accesses %u and misses %u\n", L2_read_accesses, L2_read_misses);
+    printf("L2-cache Write accesses %u and misses %u\n", L2_write_accesses, L2_write_misses);
+	
+	L1_D_mr = ((float)D_read_misses + (float)D_write_misses) / ((float)D_read_accesses + (float)D_write_accesses);
+	L1_I_mr = 100000*((float)I_misses / (float)I_accesses);
+	if(L2_size != 0){
+		L2_mr = ((float)L2_read_misses + (float)L2_write_misses) / ((float)L2_read_accesses + (float)L2_write_accesses);
+	}
+	
+	printf("L1 Data Cache miss rate %f\n", L1_D_mr);
+	printf("L1 Instruction Cache miss rate %fe-5\n", L1_I_mr);
+	printf("L2 Cache miss rate %f\n", L2_mr);
 
   trace_uninit();
 
