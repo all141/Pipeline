@@ -460,8 +460,13 @@ push_pipeline(buff_stages[7]);
     printf("I-cache accesses %u and misses %u\n", I_accesses, I_misses);
     printf("D-cache Read accesses %u and misses %u\n", D_read_accesses, D_read_misses);
     printf("D-cache Write accesses %u and misses %u\n", D_write_accesses, D_write_misses);
-	printf("L2-cache Read accesses %u and misses %u\n", L2_read_accesses, L2_read_misses);
-    printf("L2-cache Write accesses %u and misses %u\n", L2_write_accesses, L2_write_misses);
+	if(L2_size == 0){
+		printf("No L2 cache\n");
+	}else{
+		printf("L2-cache Read accesses %u and misses %u\n", L2_read_accesses, L2_read_misses);
+        printf("L2-cache Write accesses %u and misses %u\n", L2_write_accesses, L2_write_misses);
+	}
+	
 	
 	L1_D_mr = ((float)D_read_misses + (float)D_write_misses) / ((float)D_read_accesses + (float)D_write_accesses);
 	L1_I_mr = 100000*((float)I_misses / (float)I_accesses);
@@ -471,7 +476,12 @@ push_pipeline(buff_stages[7]);
 	
 	printf("L1 Data Cache miss rate %f\n", L1_D_mr);
 	printf("L1 Instruction Cache miss rate %fe-5\n", L1_I_mr);
-	printf("L2 Cache miss rate %f\n", L2_mr);
+	if(L2_size == 0){
+		printf("No L2 cache\n");
+	}else{
+		printf("L2 Cache miss rate %f\n", L2_mr);
+	}
+	
 
   trace_uninit();
 
